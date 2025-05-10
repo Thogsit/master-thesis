@@ -1,0 +1,166 @@
+# -= The Pionix Cloud Authentication model =-
+# Each type has a corresponding entity type in the backend.
+# The existence of which are checked on every backend build to ensure synchronization.
+#
+# Naming convention:
+# - Types: lowercase, dash-separated, e.g. "firmware-edition"
+# - Relations:
+#   - Roles/Groups: UpperCamelCase, e.g. "ParentCompany"
+#   - Permissions: snake_case, e.g. "can_view"
+#
+# Addtional information:
+# - Each type *needs* the "PionixGod" relation for technical reasons.
+#   It can be used to "overwrite" permissions if the user is part of the Pionix internal team.
+#   The relation is never assigned manually but instead dynamically added to requests if the
+#   requesting user is part of the internal team.
+#   The relation *only applies to exactly that object* i.e. it does not "inherit" to other objects like normal relations!
+
+model
+  schema 1.1
+
+type secret
+  relations
+    define SomeGroup: [user]
+    define can_view: [user] 
+
+# The cloud object is used to represent the "root" of all objects.
+# It should only be used as a last resort for everything that absolutely doesn't fit anywhere else!
+# In practice, it gets "instantiated" only once for the "Pionix Cloud" in the backend.
+type cloud
+  relations
+    define PionixGod: [user]
+    define can_create_company: [user] or PionixGod
+
+# The user object represents a user of the Pionix Cloud.
+type user
+  relations
+    define PionixGod: [user]
+    # The company that this user belongs to. It always has to be exactly a single company!
+    define ParentCompany: [company]
+    # Access Roles to a user; only used in this model file for better readability.
+    define Editor: Owner from ParentCompany or Billing from ParentCompany or PionixGod
+    define Viewer: Editor
+    # Permissions on a user entity
+    define can_edit: [user] or Editor
+    define can_delete: [user] or Editor
+    define can_view: [user] or Viewer
+
+# The company object represents a company in the Pionix Cloud.
+type company
+  relations
+    define PionixGod: [user]
+    # Assignable Roles; every user has exactly one of these roles.
+    define Owner: [user] or PionixGod
+    define Developer: [user]
+    define Billing: [user]
+    define Viewer: [user]
+    # "Member" is not an assignable role but instead automagically contains all other roles' users, so all company users.
+    define Member: Owner or Developer or Billing or Viewer
+    # Permissions on a company entity
+    define can_edit: Owner
+    define can_delete: Owner
+    define can_add_user: Owner
+    define can_change_member_roles: Owner
+    define can_add_firmware_edition: Owner or Developer
+    define can_add_charger_group: Owner or Developer
+    define can_see_members: Owner or Billing
+    define can_view: Member
+    define can_create_enrollment_otp: Owner or Developer
+
+# The firmware-edition object represents a firmware edition in the Pionix Cloud.
+type firmware-edition
+  relations
+    define PionixGod: [user]
+    # The company that owns this firmware edition.
+    define ParentCompany: [company]
+    # Access Roles to a firmware edition; only used in this model file for better readability.
+    define Editor: [user] or Owner from ParentCompany or Developer from ParentCompany or PionixGod
+    define Member: [user] or Member from ParentCompany
+    # Permissions on a firmware edition entity
+    define can_add_release_channel: [user] or Editor
+    define can_add_firmware_bundle: [user] or Editor
+    define can_add_charger: [user] or Editor
+    define can_view: [user] or Editor or Member
+    define can_delete: [user] or Editor
+
+# The release-channel object represents a release channel in the Pionix Cloud.
+type release-channel
+  relations
+    define PionixGod: [user]
+    # The firmware edition that this release channel belongs to.
+    define ParentEdition: [firmware-edition]
+    # Access Roles to a release channel; only used in this model file for better readability.
+    define Editor: Editor from ParentEdition or PionixGod
+    define Viewer: Member from ParentEdition
+    # Permissions on a release channel entity
+    define can_add_release: [user] or Editor
+    define can_add_charger: [user] or Editor
+    define can_view: [user] or Viewer
+    define can_delete: [user] or Editor
+
+# The release object represents a release in the Pionix Cloud.
+type release
+  relations
+    define PionixGod: [user]
+    # The release channel that this release belongs to.
+    define ParentChannel: [release-channel]
+    # Permissions on a release entity
+    define can_view: can_view from ParentChannel or PionixGod
+    define can_delete: can_delete from ParentChannel or PionixGod
+
+# The firmware-bundle object represents a firmware bundle in the Pionix Cloud.
+type firmware-bundle
+  relations
+    define PionixGod: [user]
+    # The firmware edition that this firmware bundle belongs to.
+    define ParentEdition: [firmware-edition]
+    # Permissions on a firmware bundle entity
+    define can_view: can_view from ParentEdition or PionixGod
+    define can_delete: can_delete from ParentEdition or PionixGod
+
+# The charger object represents a charger in the Pionix Cloud.
+type charger
+  relations
+    define PionixGod: [user]
+    # The company that this charger belongs to.
+    define ParentCompany: [company]
+    # Access Roles to a charger; only used in this model file for better readability.
+    define Editor: Owner from ParentCompany or Developer from ParentCompany
+    define Viewer: Member from ParentCompany
+    # Permissions on a charger entity
+    define can_add_to_firmware_edition: Editor
+    define can_add_to_release_channel: Editor
+    define can_access_remote_ssh: Editor
+    define can_update_firmware: Editor
+    define can_request_logs: Editor
+    define can_move: Editor
+    define can_edit: Editor
+    define can_delete: Editor
+    define can_view: Editor
+    define can_view_telemetry: Viewer
+    define can_view_logs: Viewer
+    define can_view_jobs: Viewer
+    define can_view_session_events: Viewer
+    define can_view_everest_config: Viewer
+    define can_edit_everest_config: Editor
+
+type charging-session-event
+  relations
+    define PionixGod: [user]
+    # The charger that is the source of this event
+    define SourceCharger: [charger]
+    # Permissions on a charging session event entity
+    define can_view: can_view_session_events from SourceCharger or PionixGod
+
+# TODO(PC-337): Refactor charger groups; move permissions from charger type to this charger-group type
+type charger-group
+  relations
+    define PionixGod: [user]
+    define member: [user]
+    define can_view: member
+
+type cert-organizational-unit
+  relations
+    define PionixGod: [user]
+    # All companies that this OU belongs to. Can be multiple.
+    define ParentCompany: [company]

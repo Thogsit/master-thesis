@@ -1,0 +1,67 @@
+name: Test (JS)
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+    
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    
+      - name: Set up node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ./pkg/js/package-lock.json  
+          
+      - name: Audit dependencies
+        run: make audit-js
+    
+      - name: Run eslint and prettier
+        run: make lint-js
+
+  check-gen:
+      runs-on: ubuntu-latest
+      
+      steps:
+        - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+        - name: Generate Antlr code and validate up to date
+          run: |
+             make antlr-gen-js
+             git diff --text --exit-code ./pkg/js/gen
+
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+    
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+    
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      
+      - name: Set up node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@openfga'
+          always-auth: false
+          cache: 'npm'
+          cache-dependency-path: ./pkg/js/package-lock.json  
+    
+      - name: Build
+        run: make all-tests-js
+    

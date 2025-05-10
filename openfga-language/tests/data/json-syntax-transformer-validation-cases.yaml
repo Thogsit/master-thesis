@@ -1,0 +1,388 @@
+- name: mixed operators
+  json: >2-
+    {
+      "schema_version": "1.1",
+      "type_definitions": [
+        {
+          "type": "user",
+          "relations": {}
+        },
+        {
+          "type": "folder",
+          "relations": {
+            "admin": {
+              "this": {}
+            },
+            "viewer": {
+              "this": {}
+            },
+            "blocked": {
+              "this": {}
+            },
+            "can_view": {
+              "union": {
+                "child": [
+                  {
+                    "computedUserset": {
+                      "relation": "admin"
+                    }
+                  },
+                  {
+                    "difference": {
+                      "base": {
+                        "computedUserset": {
+                          "relation": "viewer"
+                        }
+                      },
+                      "subtract": {
+                        "computedUserset": {
+                          "relation": "blocked"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "admin": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "viewer": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "blocked": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "can_view": {
+                "directly_related_user_types": []
+              }
+            }
+          }
+        }
+      ]
+    }
+
+- name: mixed operators with direct assignment 1
+  json: >2-
+    {
+      "schema_version": "1.1",
+      "type_definitions": [
+        {
+          "type": "user",
+          "relations": {
+            "rel1": {
+              "this": {}
+            },
+            "rel2": {
+              "difference": {
+                "base": {
+                  "computedUserset": {
+                    "relation": "rel1"
+                  }
+                },
+                "subtract": {
+                  "this": {}
+                }
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "rel1": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "rel2": {
+                "directly_related_user_types": []
+              }
+            }
+          }
+        }
+      ]
+    }
+  valid: false
+  error_message: the 'rel2' relation definition under the 'user' type is not supported by the OpenFGA DSL syntax yet
+
+- name: mixed operators with direct assignment 2
+  json: >2-
+    {
+      "schema_version": "1.1",
+      "type_definitions": [
+        {
+          "type": "user",
+          "relations": {
+            "allowed": {
+              "this": {}
+            },
+            "blocked": {
+              "this": {}
+            },
+            "rel1": {
+              "union": {
+                "child": [
+                  {
+                    "intersection": {
+                      "child": [
+                        {
+                          "this": {}
+                        },
+                        {
+                          "computedUserset": {
+                            "relation": "allowed"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "difference": {
+                      "base": {
+                        "this": {}
+                      },
+                      "subtract": {
+                        "computedUserset": {
+                          "relation": "blocked"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "allowed": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "blocked": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "rel1": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  valid: false
+  error_message: the 'rel1' relation definition under the 'user' type is not supported by the OpenFGA DSL syntax yet
+
+- name: mixed operators with direct assignment 3
+  json: >2-
+    {
+      "schema_version": "1.1",
+      "type_definitions": [
+        {
+          "type": "user",
+          "relations": {
+            "rel1": {
+              "this": {}
+            },
+            "rel2": {
+              "this": {}
+            },
+            "rel3": {
+              "this": {}
+            },
+            "rel4": {
+              "union": {
+                "child": [
+                  {
+                    "computedUserset": {
+                      "relation": "rel3"
+                    }
+                  },
+                  {
+                    "difference": {
+                      "base": {
+                        "intersection": {
+                          "child": [
+                            {
+                              "computedUserset": {
+                                "relation": "rel1"
+                              }
+                            },
+                            {
+                              "computedUserset": {
+                                "relation": "rel2"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "subtract": {
+                        "this": {}
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "rel1": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "rel2": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "rel3": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "rel4": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  valid: false
+  error_message: the 'rel4' relation definition under the 'user' type is not supported by the OpenFGA DSL syntax yet
+
+- name: relation def where this is not in first place (union)
+  json: >2-
+    {
+      "schema_version": "1.1",
+      "type_definitions": [
+        {
+          "type": "user",
+          "relations": {
+            "rel1": {
+              "this": {}
+            },
+            "rel2": {
+              "union": {
+                "child": [
+                  {
+                    "computedUserset": {
+                      "relation": "rel1"
+                    }
+                  },
+                  {
+                    "this": {}
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "rel1": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "rel2": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  valid: true
+
+- name: relation def where this is not in first place (intersection)
+  json: >2-
+    {
+      "schema_version": "1.1",
+      "type_definitions": [
+        {
+          "type": "user",
+          "relations": {
+            "rel1": {
+              "this": {}
+            },
+            "rel2": {
+              "intersection": {
+                "child": [
+                  {
+                    "computedUserset": {
+                      "relation": "rel1"
+                    }
+                  },
+                  {
+                    "this": {}
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "rel1": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "rel2": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  valid: true

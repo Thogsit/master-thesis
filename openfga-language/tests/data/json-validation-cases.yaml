@@ -1,0 +1,193 @@
+---
+- name: invalid schema version
+  json: |
+    {
+      "schema_version": "1.3"
+    }
+  expected_errors:
+    - msg: "invalid schema 1.3"
+      metadata:
+        symbol: "1.3"
+        errorType: invalid-schema
+
+- name: missing schema
+  json: |
+    {
+      "type_definitions": []
+    }
+  expected_errors:
+    - msg: "schema version required"
+      metadata:
+        symbol: ""
+        errorType: schema-version-required
+
+- name: relation def where this is not in first place
+  json: |
+    {
+      "schema_version": "1.1",
+      "type_definitions": [
+        {
+          "type": "user",
+          "relations": {
+            "rel1": {
+              "this": {}
+            },
+            "rel2": {
+              "union": {
+                "child": [
+                  {
+                    "computedUserset": {
+                      "relation": "rel1"
+                    }
+                  },
+                  {
+                    "this": {}
+                  }
+                ]
+              }
+            }
+          },
+          "metadata": {
+            "relations": {
+              "rel1": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              },
+              "rel2": {
+                "directly_related_user_types": [
+                  {
+                    "type": "user"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  expected_errors:
+
+- name: condition key and name property differ
+  json: |
+    {
+      "schema_version": "1.1",
+      "type_definitions":[
+        {
+          "relations": {},
+          "type": "user"
+        },
+        {
+          "metadata": {
+            "relations": {
+              "member": {
+                "directly_related_user_types": [
+                  {
+                    "condition": "name",
+                    "type": "user"
+                  }
+                ]
+              }
+            }
+          },
+          "relations": {
+            "member": {
+              "this": {}
+            }
+          },
+          "type": "org"
+        }
+      ],
+      "conditions": {
+        "name": {
+          "expression": "val <= 10",
+          "metadata": {
+            "module": "org",
+            "source_info": {
+              "file": "org.fga"
+            }
+          },
+          "name": "different_name",
+          "parameters": {
+            "val": {
+              "type_name": "TYPE_NAME_INT"
+            }
+          }
+        }
+      }
+    }
+  expected_errors:
+    - msg: "condition key is `name` but nested name property is different_name"
+      metadata:
+        symbol: "different_name"
+        errorType: different-nested-condition-name
+
+- name: file can only include one module
+  json: |
+    {
+      "schema_version": "1.2",
+      "type_definitions": [
+        {
+          "metadata": {
+            "module": "core",
+            "source_info": {
+              "file": "core.fga"
+            }
+          },
+          "relations": {},
+          "type": "user"
+        },
+        {
+          "metadata": {
+            "module": "other",
+            "source_info": {
+              "file": "core.fga"
+            },
+            "relations": {
+              "member": {
+                "directly_related_user_types": [
+                  {
+                    "condition": "name",
+                    "type": "user"
+                  }
+                ],
+                "module": "relationmodule",
+                "source_info": {
+                  "file": "core.fga"
+                }
+              }
+            }
+          },
+          "relations": {
+            "member": {
+              "this": {}
+            }
+          },
+          "type": "org"
+        }
+      ],
+      "conditions": {
+        "name": {
+          "expression": "val <= 10",
+          "metadata": {
+            "module": "conditionmodule",
+            "source_info": {
+              "file": "core.fga"
+            }
+          },
+          "name": "name",
+          "parameters": {
+            "val": {
+              "type_name": "TYPE_NAME_INT"
+            }
+          }
+        }
+      }
+    }
+  expected_errors:
+    - msg: "file core.fga would contain multiple module definitions (core, other, relationmodule, conditionmodule) when transforming to DSL. Only one module can be defined per file."
+      metadata:
+        symbol: "core.fga"
+        errorType: multiple-modules-in-file
