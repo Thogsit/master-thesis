@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SealedFga", "SealedFga\SealedFga.csproj", "{7B25C9DD-99F6-4920-9FC5-55BFFB7C62E6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SealedFga.Sample", "SealedFga.Sample\SealedFga.Sample.csproj", "{7BA11B60-0061-42D8-9087-C497E8137C3F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SealedFga.Tests", "SealedFga.Tests\SealedFga.Tests.csproj", "{85EE6763-FE24-4EF7-97D1-82ACE0E53F29}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenFga.Language", "..\openfga-language\pkg\csharp\OpenFga.Language.csproj", "{5CC156D2-3275-46C8-8ACC-D6D4C115ED39}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7B25C9DD-99F6-4920-9FC5-55BFFB7C62E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B25C9DD-99F6-4920-9FC5-55BFFB7C62E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B25C9DD-99F6-4920-9FC5-55BFFB7C62E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B25C9DD-99F6-4920-9FC5-55BFFB7C62E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BA11B60-0061-42D8-9087-C497E8137C3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BA11B60-0061-42D8-9087-C497E8137C3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BA11B60-0061-42D8-9087-C497E8137C3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BA11B60-0061-42D8-9087-C497E8137C3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{85EE6763-FE24-4EF7-97D1-82ACE0E53F29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{85EE6763-FE24-4EF7-97D1-82ACE0E53F29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{85EE6763-FE24-4EF7-97D1-82ACE0E53F29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{85EE6763-FE24-4EF7-97D1-82ACE0E53F29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CC156D2-3275-46C8-8ACC-D6D4C115ED39}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CC156D2-3275-46C8-8ACC-D6D4C115ED39}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CC156D2-3275-46C8-8ACC-D6D4C115ED39}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5CC156D2-3275-46C8-8ACC-D6D4C115ED39}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

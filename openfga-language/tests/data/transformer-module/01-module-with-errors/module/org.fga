@@ -1,0 +1,15 @@
+module org
+
+type org
+  relations
+    define member: [user with a_check]
+
+extend type noexist
+
+extend type other
+  relations
+    define foo: [user]
+
+condition a_check(val: int) {
+  val <= 10
+}
