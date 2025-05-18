@@ -26,8 +26,7 @@ public static class Program
         builder.Services.AddScoped<SecretService>();
         builder.Services.AddControllers(options =>
         {
-            // Register the custom model binder provider
-            options.ModelBinderProviders.Insert(0, new FgaEntityModelBinderProvider());
+            options.ModelBinderProviders.Insert(0, new SealedFgaModelBinderProvider<SealedFgaSampleContext>());
         });
 
         var app = builder.Build();

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SealedFga.Sample.FgaAuthorization;
@@ -9,9 +10,11 @@ namespace SealedFga.Sample.Secret;
 public class SecretController(SecretService secretService) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAllSecrets()
+    public async Task<IActionResult> GetAllSecrets(
+        [FgaAuthorizeList(Relation = nameof(SecretEntityIdAttributes.can_view))]
+        List<SecretEntity> secrets
+    )
     {
-        var secrets = await secretService.GetAllSecretsAsync();
         return Ok(secrets);
     }
 

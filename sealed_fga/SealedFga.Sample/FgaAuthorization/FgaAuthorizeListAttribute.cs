@@ -4,8 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace SealedFga.Sample.FgaAuthorization;
 
 [AttributeUsage(AttributeTargets.Parameter)]
-public class FgaAuthorizeAttribute() : ModelBinderAttribute(typeof(SealedFgaEntityModelBinder))
+public class FgaAuthorizeListAttribute() : ModelBinderAttribute(typeof(SealedFgaEntityListModelBinder))
 {
     public required string Relation { get; set; }
-    public string ParameterName { get; set; }
 }

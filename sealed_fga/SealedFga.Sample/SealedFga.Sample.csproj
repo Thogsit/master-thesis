@@ -7,10 +7,12 @@
         <OutputType>Exe</OutputType>
 
         <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+
+        <LangVersion>preview</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\SealedFga\SealedFga.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true"/>
+        <ProjectReference Include="..\SealedFga\SealedFga.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
     </ItemGroup>
     
     <!-- TODO: Find a better solution -->
@@ -19,10 +21,11 @@
         <Analyzer Include="..\SealedFga\bin\Debug\netstandard2.0\OpenFga.Language.dll" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />
+        <PackageReference Include="OpenFga.Sdk" Version="0.5.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <AdditionalFiles Include="model.fga"/>
+        <AdditionalFiles Include="model.fga" />
     </ItemGroup>
 
 </Project>
