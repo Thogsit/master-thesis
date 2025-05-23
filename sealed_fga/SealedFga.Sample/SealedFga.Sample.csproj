@@ -12,20 +12,33 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\SealedFga\SealedFga.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
-    </ItemGroup>
-    
-    <!-- TODO: Find a better solution -->
-    <ItemGroup>
-        <PackageReference Include="Antlr4.Runtime.Standard" OutputItemType="Analyzer" />
-        <Analyzer Include="..\SealedFga\bin\Debug\netstandard2.0\OpenFga.Language.dll" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />
-        <PackageReference Include="OpenFga.Sdk" Version="0.5.1" />
+        <ProjectReference Include="..\SealedFga\SealedFga.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true"/>
     </ItemGroup>
 
     <ItemGroup>
-        <AdditionalFiles Include="model.fga" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4"/>
+        <PackageReference Include="OpenFga.Sdk" Version="0.5.1"/>
+    </ItemGroup>
+
+    <!-- TODO: Find a better solution -->
+    <ItemGroup>
+        <PackageReference Include="Antlr4.Runtime.Standard" OutputItemType="Analyzer"/>
+        <Analyzer Include="..\SealedFga\bin\Debug\netstandard2.0\OpenFga.Language.dll"/>
+        <!--<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />-->
+
+    </ItemGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true"/>
+        <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll"/>
+        <!-- The patched DLL seems to lead to runtime problems.
+        Instead we use the original one as seen above and disable runtime permission checks by mimicking the IgnoresAccessChecksToAttribute
+        <Analyzer Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" />-->
+    </ItemGroup>
+
+    <ItemGroup>
+        <AdditionalFiles Include="model.fga"/>
     </ItemGroup>
 
 </Project>
