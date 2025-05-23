@@ -21,7 +21,8 @@ model
 type secret
   relations
     define SomeGroup: [user]
-    define can_view: [user] 
+    define can_view: [user]
+    define can_edit: [user]
 
 # The cloud object is used to represent the "root" of all objects.
 # It should only be used as a last resort for everything that absolutely doesn't fit anywhere else!

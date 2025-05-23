@@ -16,35 +16,29 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!--<PackageReference Include="CodegenCS.Core" Version="3.5.0" PrivateAssets="all"/>-->
-        <!--<PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.40" PrivateAssets="all"/>-->
-        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4">
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" PrivateAssets="all"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.3.0" PrivateAssets="all"/>
         <ProjectReference Include="..\..\openfga-language\pkg\csharp\OpenFga.Language.csproj" PrivateAssets="all"/>
+    </ItemGroup>
+    
+    <ItemGroup>
+        <!-- Enable either THIS for the "internal" -> "public" patched DLL file -->
+        <Reference Include="Microsoft.CodeAnalysis.AnalyzerUtilities">
+            <HintPath>..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
+        <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
+        <!-- Or THIS for the real library
+        <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" PrivateAssets="all" />-->
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-        <None Include="$(OutputPath)\OpenFga.Language.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-        <!--
-        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-        <None Include="..\..\openfga-language\pkg\csharp\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-        -->
+        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+        <None Include="$(OutputPath)\OpenFga.Language.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+        <!--<None Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />-->
     </ItemGroup>
-    
-    <!--
-    <PropertyGroup>
-        <GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
-    </PropertyGroup>
-    <Target Name="GetDependencyTargetPaths">
-        <ItemGroup>
-            <TargetPathWithTargetPlatformMoniker Include="$(PKGOpenFga_Language)\lib\netstandard2.0\OpenFga.Language.dll" IncludeRuntimeDependency="false" />
-        </ItemGroup>
-    </Target>
-    -->
 
 </Project>
