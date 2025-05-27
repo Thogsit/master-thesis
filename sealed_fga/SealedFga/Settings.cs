@@ -5,6 +5,7 @@ namespace SealedFga;
 public static class Settings
 {
     public const string PackageNamespace = "SealedFga";
+    public const string ModelBindingNamespace = PackageNamespace + ".ModelBinding";
 
     public static readonly ImmutableArray<string> HttpEndpointAttributeFullNames = ImmutableArray.Create(
         "Microsoft.AspNetCore.Mvc.HttpGetAttribute",

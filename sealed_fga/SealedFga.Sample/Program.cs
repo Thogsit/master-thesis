@@ -4,7 +4,7 @@ using SealedFga.Sample.Secret;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SealedFga.ModelBinder;
+using SealedFga.ModelBinding;
 
 namespace SealedFga.Sample;
 

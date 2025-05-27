@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.GlobalFlowStateAnalysis;
+using SealedFga.Models;
 
 namespace SealedFga.Analysis;
 
 internal class OpenFgaDataFlowVisitor(
     GlobalFlowStateAnalysisContext analysisContext,
-    Dictionary<string, HashSet<string>> checkedPermissionsByEntityId
+    CheckedPermissionsByEntityVarDict checkedPermissionsByEntityId
 ) : GlobalFlowStateValueSetFlowOperationVisitor(analysisContext, hasPredicatedGlobalState: true)
 {
     /// <summary>
@@ -24,7 +25,7 @@ internal class OpenFgaDataFlowVisitor(
     /// }
     /// </code>
     /// </example>
-    public Dictionary<string, HashSet<string>> CheckedPermissionsByEntityId { get; } = checkedPermissionsByEntityId;
+    public CheckedPermissionsByEntityVarDict CheckedPermissionsByEntityId { get; } = checkedPermissionsByEntityId;
     
     
 }
