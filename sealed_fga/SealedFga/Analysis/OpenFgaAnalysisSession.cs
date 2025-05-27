@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -109,6 +110,19 @@ public class OpenFgaAnalysisSession(
     {
         var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(context.Compilation);
 
+        // Build Dependency Injection map
+        var interfaceRedirects = new Dictionary<INamedTypeSymbol, INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        foreach (var (interfaceSymbol, implByAttr) in _implementedByAttributeByInterface)
+        {
+            if (implByAttr.ConstructorArguments[0].Value is not INamedTypeSymbol implementingClassSymbol)
+            {
+                continue;
+            }
+            
+            interfaceRedirects.Add(interfaceSymbol, implementingClassSymbol.OriginalDefinition);
+        }
+
+        // Analyse all http endpoints
         foreach (var httpEndpointMethodContext in _httpEndpointMethodContexts)
         {
             var cfg = ControlFlowGraph.Create(
@@ -177,6 +191,7 @@ public class OpenFgaAnalysisSession(
                 httpEndpointMethodContext.MethodSymbol,
                 (ctx) => new OpenFgaDataFlowVisitor(
                     ctx,
+                    interfaceRedirects,
                     checkedPermissionsByEntityVar
                 ),
                 wellKnownTypeProvider,

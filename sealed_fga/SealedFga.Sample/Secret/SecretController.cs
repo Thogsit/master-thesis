@@ -10,7 +10,10 @@ public record UpdateSecretRequestDto(string Value);
 
 [ApiController]
 [Route("secrets")]
-public class SecretController(SealedFgaSampleContext context, SecretService secretService) : ControllerBase
+public class SecretController(
+    SealedFgaSampleContext context,
+    ISecretService secretService
+) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAllSecrets(
@@ -41,6 +44,8 @@ public class SecretController(SealedFgaSampleContext context, SecretService secr
     {
         secret.Value = updateSecretRequestDto.Value;
         await context.SaveChangesAsync();
+        
+        secretService.DependencyInjectionTest();
 
         return Ok(secret);
     }

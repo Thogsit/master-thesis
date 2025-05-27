@@ -17,7 +17,7 @@ public static class Program
         // Add services to the container
         builder.Services.AddDbContext<SealedFgaSampleContext>(options =>
             options.UseInMemoryDatabase("SealedFgaSampleDb"));
-        builder.Services.AddScoped<SecretService>();
+        builder.Services.AddScoped<ISecretService, SecretService>();
         builder.Services.AddControllers(options =>
         {
             options.ModelBinderProviders.Insert(0, new SealedFgaModelBinderProvider<SealedFgaSampleContext>());
