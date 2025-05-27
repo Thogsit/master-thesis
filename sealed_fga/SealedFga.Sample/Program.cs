@@ -1,16 +1,10 @@
-using System;
-using System.ComponentModel;
-using System.Linq;
-using System.Reflection;
-using System.Text.Json.Serialization;
 using SealedFga.Sample.Database;
-using SealedFga.Sample.FgaAuthorization;
 using SealedFga.Sample.Secret;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SealedFga.Attributes;
+using SealedFga.ModelBinder;
 
 namespace SealedFga.Sample;
 

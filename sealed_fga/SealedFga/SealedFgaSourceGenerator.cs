@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,7 @@ using OpenFga.Language;
 using OpenFga.Language.Model;
 using SealedFga.Attributes;
 using SealedFga.Generators;
+using SealedFga.Generators.ModelBinder;
 using SealedFga.Models;
 
 namespace SealedFga;
@@ -90,40 +92,27 @@ public class SealedFgaSourceGenerator : IIncrementalGenerator
 
     private static void GenerateNonIncrementalSourceFiles(IncrementalGeneratorPostInitializationContext context)
     {
-        // Generate IOpenFgaTypeIdWithoutAssociatedIdType
-        var iOpenFgaTypeIdWithAssociatedIdTypeGenFile = IOpenFgaTypeIdWithoutAssociatedIdTypeGenerator.Generate();
-        context.AddSource(
-            iOpenFgaTypeIdWithAssociatedIdTypeGenFile.FileName,
-            iOpenFgaTypeIdWithAssociatedIdTypeGenFile.BuildFullFileContent()
-        );
+        var generatedFiles = new List<GeneratedFile>([
+            IOpenFgaTypeIdWithoutAssociatedIdTypeGenerator.Generate(),
+            IOpenFgaTypeIdGenerator.Generate(),
+            SealedFgaExtensionsGenerator.Generate(),
+            OpenFgaRelationInterfacesGenerator.Generate(),
+            GuidIdTypeConverterGenerator.Generate(),
+            FgaAuthorizeAttributeGenerator.Generate(),
+            FgaAuthorizeListAttributeGenerator.Generate(),
+            SealedFgaEntityListModelBinderGenerator.Generate(),
+            SealedFgaEntityModelBinderGenerator.Generate(),
+            SealedFgaModelBinderGenerator.Generate(),
+            SealedFgaModelBinderProviderGenerator.Generate()
+        ]);
 
-        // Generate IOpenFgaTypeId
-        var iOpenFgaTypeIdGenFile = IOpenFgaTypeIdGenerator.Generate();
-        context.AddSource(
-            iOpenFgaTypeIdGenFile.FileName,
-            iOpenFgaTypeIdGenFile.BuildFullFileContent()
-        );
-
-        // Generate SealedFgaExtensions
-        var sealedFgaExtensionsGenFile = SealedFgaExtensionsGenerator.Generate();
-        context.AddSource(
-            sealedFgaExtensionsGenFile.FileName,
-            sealedFgaExtensionsGenFile.BuildFullFileContent()
-        );
-
-        // Generate OpenFGA relation interfaces
-        var openFgaRelationGenFile = OpenFgaRelationInterfacesGenerator.Generate();
-        context.AddSource(
-            openFgaRelationGenFile.FileName,
-            openFgaRelationGenFile.BuildFullFileContent()
-        );
-        
-        // Generate Guid ID type base converter
-        var guidIdTypeConverterGenFile = GuidIdTypeConverterGenerator.Generate();
-        context.AddSource(
-            guidIdTypeConverterGenFile.FileName,
-            guidIdTypeConverterGenFile.BuildFullFileContent()
-        );
+        foreach (var genFile in generatedFiles)
+        {
+            context.AddSource(
+                genFile.FileName,
+                genFile.BuildFullFileContent()
+            );
+        }
     }
 
     private static void GenerateCodeOnFgaRelatedChange(
