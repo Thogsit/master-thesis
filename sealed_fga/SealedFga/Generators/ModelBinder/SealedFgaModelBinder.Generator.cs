@@ -47,6 +47,6 @@ public static class SealedFgaModelBinderGenerator
             "Microsoft.EntityFrameworkCore",
             "Microsoft.Extensions.DependencyInjection"
         ]),
-        Settings.PackageNamespace + ".ModelBinder"
+        Settings.ModelBindingNamespace
     );
 }

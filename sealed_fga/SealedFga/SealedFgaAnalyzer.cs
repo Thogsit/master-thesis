@@ -18,7 +18,7 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
-    
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; }
         = ImmutableArray.Create(FoundContextRule);
 
@@ -26,12 +26,18 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer
     {
         //context.EnableConcurrentExecution(); TODO: Put back in when done with debugging
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
-        
+
         context.RegisterCompilationStartAction(compilationStartContext =>
         {
             // Find the "ImplementedBy" attribute symbol to be used for dependency injection on control flow analysis
             var implementedByAttributeSymbol =
                 compilationStartContext.Compilation.GetTypeByMetadataName(typeof(ImplementedByAttribute).FullName!)!;
+            var fgaAuthorizeAttributeSymbol = compilationStartContext.Compilation.GetTypeByMetadataName(
+                Settings.ModelBindingNamespace + ".FgaAuthorizeAttribute"
+            )!;
+            var fgaAuthorizeListAttributeSymbol = compilationStartContext.Compilation.GetTypeByMetadataName(
+                Settings.ModelBindingNamespace + ".FgaAuthorizeListAttribute"
+            )!;
             var httpEndpointAttributes =
                 Settings.HttpEndpointAttributeFullNames.Select(name =>
                         compilationStartContext.Compilation.GetTypeByMetadataName(name)!
@@ -39,9 +45,15 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer
                     .ToImmutableHashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
             // Register the analysis sessions' handlers
-            var analysisSession = new OpenFgaAnalysisSession(FoundContextRule, implementedByAttributeSymbol, httpEndpointAttributes);
+            var analysisSession = new OpenFgaAnalysisSession(
+                FoundContextRule,
+                implementedByAttributeSymbol,
+                fgaAuthorizeAttributeSymbol,
+                fgaAuthorizeListAttributeSymbol,
+                httpEndpointAttributes
+            );
             compilationStartContext.RegisterSemanticModelAction(analysisSession.OnSemanticModelDataGathering);
-            
+
             // Register handler for the real analysis after all data has been gathered
             compilationStartContext.RegisterCompilationEndAction(analysisSession.OnCompilationEndRunAnalysis);
         });

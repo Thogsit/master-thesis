@@ -27,6 +27,6 @@ public static class SealedFgaModelBinderProviderGenerator
         new HashSet<string>([
             "Microsoft.AspNetCore.Mvc.ModelBinding"
         ]),
-        Settings.PackageNamespace + ".ModelBinder"
+        Settings.ModelBindingNamespace
     );
 }

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SealedFga.ModelBinder;
+using SealedFga.ModelBinding;
 using SealedFga.Sample.Database;
 
 namespace SealedFga.Sample.Secret;

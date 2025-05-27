@@ -20,6 +20,6 @@ public static class FgaAuthorizeAttributeGenerator
             "System",
             "Microsoft.AspNetCore.Mvc"
         ]),
-        Settings.PackageNamespace + ".ModelBinder"
+        Settings.ModelBindingNamespace
     );
 }

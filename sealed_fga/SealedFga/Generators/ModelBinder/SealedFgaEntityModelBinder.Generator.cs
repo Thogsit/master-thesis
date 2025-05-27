@@ -87,6 +87,6 @@ public static class SealedFgaEntityModelBinderGenerator
             "SealedFga.Attributes",
             "SealedFga"
         ]),
-        Settings.PackageNamespace + ".ModelBinder"
+        Settings.ModelBindingNamespace
     );
 }

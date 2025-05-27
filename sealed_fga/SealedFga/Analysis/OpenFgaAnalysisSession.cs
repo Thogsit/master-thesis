@@ -3,12 +3,14 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Analyzer.Utilities;
+using Analyzer.Utilities.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.GlobalFlowStateAnalysis;
+using SealedFga.Models;
 
 // We need this to be able to use the "internal" GlobalFlowStateAnalysis
 [assembly: IgnoresAccessChecksTo("Microsoft.CodeAnalysis.AnalyzerUtilities")]
@@ -18,6 +20,8 @@ namespace SealedFga.Analysis;
 public class OpenFgaAnalysisSession(
     DiagnosticDescriptor rule,
     INamedTypeSymbol implementedByAttributeSymbol,
+    INamedTypeSymbol fgaAuthorizeAttributeSymbol,
+    INamedTypeSymbol fgaAuthorizeListAttributeSymbol,
     ImmutableHashSet<INamedTypeSymbol> httpEndpointAttributeSymbols
 )
 {
@@ -119,11 +123,52 @@ public class OpenFgaAnalysisSession(
             }
 
             // Extract auth data from annotated parameters
+            var checkedPermissionsByEntityVar = new CheckedPermissionsByEntityVarDict();
             foreach (var httpParamSymbol in httpEndpointMethodContext.MethodSymbol.Parameters)
             {
                 foreach (var attrData in httpParamSymbol.GetAttributes())
                 {
-                    //if (attrData.AttributeClass is null || attrData.)
+                    if (attrData.AttributeClass is null)
+                    {
+                        continue;
+                    }
+
+                    // [FgaAuthorize(Relation = "...", ParameterName = "...")]
+                    if (SymbolEqualityComparer.Default.Equals(attrData.AttributeClass, fgaAuthorizeAttributeSymbol))
+                    {
+                        string? relParam = null;
+                        string? paramNameParam = null;
+                        foreach (var (paramName, paramVal) in attrData.NamedArguments)
+                        {
+                            switch (paramName)
+                            {
+                                case "Relation":
+                                    relParam = paramVal.Value as string;
+                                    break;
+                                case "ParameterName":
+                                    paramNameParam = paramVal.Value as string;
+                                    break;
+                            }
+                        }
+
+                        if (relParam is not null && paramNameParam is not null)
+                        {
+                            // ID parameter, e.g. "SecretEntityId secretId"
+                            checkedPermissionsByEntityVar.AddPermission(paramNameParam, relParam);
+                            // Entity parameter, e.g. "SecretEntity secret"
+                            checkedPermissionsByEntityVar.AddPermission(httpParamSymbol.Name, relParam);
+                        }
+                    }
+
+                    // [FgaAuthorizeList(Relation = "...")]
+                    if (SymbolEqualityComparer.Default.Equals(attrData.AttributeClass, fgaAuthorizeListAttributeSymbol))
+                    {
+                        if (attrData.NamedArguments.Length > 0)
+                        {
+                            var relParam = (string)attrData.NamedArguments[0].Value.Value!;
+                            checkedPermissionsByEntityVar.AddPermission(httpParamSymbol.Name, relParam);
+                        }
+                    }
                 }
             }
 
@@ -132,7 +177,7 @@ public class OpenFgaAnalysisSession(
                 httpEndpointMethodContext.MethodSymbol,
                 (ctx) => new OpenFgaDataFlowVisitor(
                     ctx,
-                    new Dictionary<string, HashSet<string>>()
+                    checkedPermissionsByEntityVar
                 ),
                 wellKnownTypeProvider,
                 context.Options,
