@@ -12,6 +12,7 @@ using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.GlobalFlowStateAnalysis;
 
 // We need this to be able to use the "internal" GlobalFlowStateAnalysis
 [assembly: IgnoresAccessChecksTo("Microsoft.CodeAnalysis.AnalyzerUtilities")]
+
 namespace SealedFga.Analysis;
 
 public class OpenFgaAnalysisSession(
@@ -111,15 +112,28 @@ public class OpenFgaAnalysisSession(
                 httpEndpointMethodContext.MethodSemanticModel
             );
 
+            // Should not happen?
             if (cfg == null)
             {
                 continue;
             }
 
+            // Extract auth data from annotated parameters
+            foreach (var httpParamSymbol in httpEndpointMethodContext.MethodSymbol.Parameters)
+            {
+                foreach (var attrData in httpParamSymbol.GetAttributes())
+                {
+                    //if (attrData.AttributeClass is null || attrData.)
+                }
+            }
+
             var analysisResult = GlobalFlowStateAnalysis.TryGetOrComputeResult(
                 cfg,
                 httpEndpointMethodContext.MethodSymbol,
-                (ctx) => new OpenFgaDataFlowVisitor(ctx),
+                (ctx) => new OpenFgaDataFlowVisitor(
+                    ctx,
+                    new Dictionary<string, HashSet<string>>()
+                ),
                 wellKnownTypeProvider,
                 context.Options,
                 rule,
