@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
@@ -12,9 +11,7 @@ internal class OpenFgaDataFlowVisitor(
     GlobalFlowStateAnalysisContext analysisContext,
     Dictionary<INamedTypeSymbol, INamedTypeSymbol> interfaceRedirects,
     CheckedPermissionsByEntityVarDict checkedPermissionsByEntityId
-) : GlobalFlowStateValueSetFlowOperationVisitor(analysisContext, hasPredicatedGlobalState: true)
-{
-    
+) : GlobalFlowStateValueSetFlowOperationVisitor(analysisContext, true) {
     /// <summary>
     ///     Visits a method invocation.
     ///     Overriden to replace the target method if necessary to imitate dependency injection.
@@ -25,8 +22,8 @@ internal class OpenFgaDataFlowVisitor(
         ImmutableArray<IArgumentOperation> visitedArguments,
         bool invokedAsDelegate,
         IOperation originalOperation,
-        GlobalFlowStateAnalysisValueSet defaultValue)
-    {
+        GlobalFlowStateAnalysisValueSet defaultValue
+    ) {
         method = HandleDependencyInjection(method);
         var value = base.VisitInvocation_NonLambdaOrDelegateOrLocalFunction(
             method,
@@ -46,12 +43,10 @@ internal class OpenFgaDataFlowVisitor(
     /// </summary>
     /// <param name="method">Target method.</param>
     /// <returns>Replaced method or same if no replacement is known.</returns>
-    private IMethodSymbol HandleDependencyInjection(IMethodSymbol method)
-    {
+    private IMethodSymbol HandleDependencyInjection(IMethodSymbol method) {
         method = method.OriginalDefinition;
         interfaceRedirects.TryGetValue(method.ContainingType, out var implementingClassSymbol);
-        if (implementingClassSymbol is null)
-        {
+        if (implementingClassSymbol is null) {
             return method;
         }
 

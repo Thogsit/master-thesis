@@ -9,8 +9,7 @@ namespace SealedFga.Util;
 /// </summary>
 /// <param name="parseFunc">A function that builds an object of type <b>T</b> from a string.</param>
 /// <typeparam name="T">The type to convert to/from.</typeparam>
-public class JsonSimpleStringConverter<T>(Func<string, T> parseFunc) : JsonConverter<T> where T : notnull
-{
+public class JsonSimpleStringConverter<T>(Func<string, T> parseFunc) : JsonConverter<T> where T : notnull {
     /// <summary>
     ///     Reads and converts the JSON to a <b>T</b> object.
     /// </summary>

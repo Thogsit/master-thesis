@@ -7,13 +7,12 @@ namespace SealedFga.Analysis;
 internal class OpenFgaDataFlowValue(
     Dictionary<string, HashSet<string>> checkedPermissionsByEntityId,
     bool negated
-) : IAbstractAnalysisValue, IEquatable<OpenFgaDataFlowValue>
-{
+) : IAbstractAnalysisValue, IEquatable<OpenFgaDataFlowValue> {
     /// <summary>
     ///     Contains all so far checked permissions per entity ID
     /// </summary>
     /// <example>
-    /// <code>
+    ///     <code>
     /// {
     ///  "type:someId": [
     ///      "can_read",
@@ -29,14 +28,11 @@ internal class OpenFgaDataFlowValue(
 
     public bool Negated { get; } = negated;
 
-    public IAbstractAnalysisValue GetNegatedValue()
-        => new OpenFgaDataFlowValue(CheckedPermissionsByEntityId, !Negated);
+    public IAbstractAnalysisValue GetNegatedValue() => new OpenFgaDataFlowValue(CheckedPermissionsByEntityId, !Negated);
 
-    public bool Equals(IAbstractAnalysisValue other)
-        => other is OpenFgaDataFlowValue otherValue && Equals(otherValue);
+    public bool Equals(IAbstractAnalysisValue other) => other is OpenFgaDataFlowValue otherValue && Equals(otherValue);
 
-    public bool Equals(OpenFgaDataFlowValue other)
-    {
+    public bool Equals(OpenFgaDataFlowValue other) {
         var otherCheckedPermissionsByEntityId = other.CheckedPermissionsByEntityId;
 
         // Reference equals
@@ -44,8 +40,7 @@ internal class OpenFgaDataFlowValue(
 
         // Content equals
         if (CheckedPermissionsByEntityId.Count != otherCheckedPermissionsByEntityId.Count) return false;
-        foreach (var kvp in CheckedPermissionsByEntityId)
-        {
+        foreach (var kvp in CheckedPermissionsByEntityId) {
             if (!otherCheckedPermissionsByEntityId.TryGetValue(kvp.Key, out var otherCheckedPermissions)) return false;
             if (!kvp.Value.SetEquals(otherCheckedPermissions)) return false;
         }
