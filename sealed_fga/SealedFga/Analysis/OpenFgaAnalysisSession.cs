@@ -24,8 +24,6 @@ public class OpenFgaAnalysisSession(
     INamedTypeSymbol fgaAuthorizeListAttributeSymbol,
     ImmutableHashSet<INamedTypeSymbol> httpEndpointAttributeSymbols
 ) {
-    private readonly HashSet<INamedTypeSymbol> _allRelevantClassSymbols = new(SymbolEqualityComparer.Default);
-
     private readonly List<HttpEndpointAnalysisContext> _httpEndpointMethodContexts = [];
 
     private readonly Dictionary<INamedTypeSymbol, AttributeData> _implementedByAttributeByInterface =
@@ -33,17 +31,6 @@ public class OpenFgaAnalysisSession(
 
     public void OnSemanticModelDataGathering(SemanticModelAnalysisContext context) {
         var root = context.SemanticModel.SyntaxTree.GetRoot();
-
-        // Parse all classes that could potentially implement our interfaces
-        foreach (var classDeclarationSyntax in root.DescendantNodes().OfType<ClassDeclarationSyntax>()) {
-            var classSymbol = (INamedTypeSymbol?) context.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax);
-            if (classSymbol is null) continue;
-
-            // Abstract classes can't be the "final" implementer of our interfaces -> skip
-            if (classSymbol.IsAbstract) continue;
-
-            _allRelevantClassSymbols.Add(classSymbol);
-        }
 
         // Parse all interfaces with our "ImplementedBy" attribute
         foreach (var interfaceDeclarationSyntax in root.DescendantNodes().OfType<InterfaceDeclarationSyntax>()) {
@@ -144,7 +131,7 @@ public class OpenFgaAnalysisSession(
                 }
             }
 
-            var analysisResult = GlobalFlowStateAnalysis.TryGetOrComputeResult(
+            _ = GlobalFlowStateAnalysis.TryGetOrComputeResult(
                 cfg,
                 httpEndpointMethodContext.MethodSymbol,
                 ctx => new OpenFgaDataFlowVisitor(
@@ -157,10 +144,9 @@ public class OpenFgaAnalysisSession(
                 rule,
                 true, // performValueContentAnalysis
                 false, // pessimisticAnalysis
-                out var valueContentAnalysisResult,
+                out _,
                 InterproceduralAnalysisKind.ContextSensitive
             );
-            var x = 42; // Used as a debug breakpoint for analysisResult inspection
         }
     }
 }

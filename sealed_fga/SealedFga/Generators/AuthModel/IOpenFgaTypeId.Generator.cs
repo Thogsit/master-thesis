@@ -1,8 +1,8 @@
 using SealedFga.Models;
 
-namespace SealedFga.Generators;
+namespace SealedFga.Generators.AuthModel;
 
-public static class IOpenFgaTypeIdGenerator {
+public static class OpenFgaTypeIdInterfaceGenerator {
     public static GeneratedFile Generate()
         => new(
             "IOpenFgaTypeId.g.cs",

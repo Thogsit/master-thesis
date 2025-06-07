@@ -28,8 +28,11 @@ public static class SealedFgaEntityListModelBinderGenerator {
                 /// <param name="context">The model binding context.</param>
                 /// <param name="param">The annotated parameter.</param>
                 /// <param name="attr">The parameter's annotation.</param>
-                protected override async Task FgaBind(ModelBindingContext context, ControllerParameterDescriptor param,
-                    FgaAuthorizeListAttribute attr)
+                protected override Task FgaBind(
+                    ModelBindingContext context,
+                    ControllerParameterDescriptor param,
+                    FgaAuthorizeListAttribute attr
+                )
                 {
                     var dbContext = GetDbContext(context);
                     var entityType = context.ModelType.GetGenericArguments()[0]; // e.g. List<SecretEntity> -> SecretEntity
@@ -41,7 +44,7 @@ public static class SealedFgaEntityListModelBinderGenerator {
                                              p.PropertyType.GetGenericArguments()[0] == entityType);
                     if (dbSetProperty == null)
                     {
-                        return;
+                        return Task.CompletedTask;
                     }
 
                     // Get all entities from DbSet via .ToList()
@@ -50,6 +53,8 @@ public static class SealedFgaEntityListModelBinderGenerator {
                     var entities = toListMethod?.Invoke(null, [dbSet]);
 
                     context.Result = ModelBindingResult.Success(entities);
+
+                    return Task.CompletedTask;
                 }
             }
             """,

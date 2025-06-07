@@ -12,8 +12,8 @@ public static class FgaAuthorizeAttributeGenerator {
             [AttributeUsage(AttributeTargets.Parameter)]
             public class FgaAuthorizeAttribute() : ModelBinderAttribute(typeof(SealedFgaEntityModelBinder))
             {
-                public string Relation { get; set; }
-                public string ParameterName { get; set; }
+                public required string Relation { get; set; }
+                public required string ParameterName { get; set; }
             }
             """,
             new HashSet<string>([

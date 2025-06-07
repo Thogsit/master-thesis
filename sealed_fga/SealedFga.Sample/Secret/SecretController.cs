@@ -11,17 +11,16 @@ public record UpdateSecretRequestDto(string Value);
 [ApiController]
 [Route("secrets")]
 public class SecretController(
-    SealedFgaSampleContext context,
-    ISecretService secretService
+    SealedFgaSampleContext context
 ) : ControllerBase {
     [HttpGet]
-    public async Task<IActionResult> GetAllSecrets(
+    public IActionResult GetAllSecrets(
         [FgaAuthorizeList(Relation = nameof(SecretEntityIdAttributes.can_view))]
         List<SecretEntity> secrets
     ) => Ok(secrets);
 
     [HttpGet("{secretId}")]
-    public async Task<IActionResult> GetSecretById(
+    public IActionResult GetSecretById(
         [FromRoute] SecretEntityId secretId,
         [FgaAuthorize(Relation = nameof(SecretEntityIdAttributes.can_view), ParameterName = nameof(secretId))]
         SecretEntity secret
