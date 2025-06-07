@@ -1,6 +1,6 @@
 using SealedFga.Models;
 
-namespace SealedFga.Generators;
+namespace SealedFga.Generators.AuthModel;
 
 public static class OpenFgaRelationInterfacesGenerator {
     public static GeneratedFile Generate()

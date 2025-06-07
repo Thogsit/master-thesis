@@ -4,9 +4,9 @@ using OpenFga.Language.Model;
 using SealedFga.Models;
 using SealedFga.Util;
 
-namespace SealedFga.Generators;
+namespace SealedFga.Generators.AuthModel;
 
-public static class _TypeName_RelationsGenerator {
+public static class TypeNameRelationsGenerator {
     private static GeneratedFile BuildRelationFile(
         string classNamespace,
         string className,

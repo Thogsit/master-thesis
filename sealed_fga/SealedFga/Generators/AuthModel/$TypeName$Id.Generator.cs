@@ -1,9 +1,10 @@
+using System;
 using System.Collections.Generic;
 using SealedFga.Models;
 
-namespace SealedFga.Generators;
+namespace SealedFga.Generators.AuthModel;
 
-public static class _TypeName_IdGenerator {
+public static class TypeNameIdGenerator {
     public static GeneratedFile Generate(IdClassToGenerateData idClassToGenerate)
         => new(
             $"{idClassToGenerate.ClassName}.partial.g.cs",
@@ -117,8 +118,11 @@ public static class _TypeName_IdGenerator {
 
     private static string GetTypeConverter(IdClassToGenerateData idClassToGenerate)
         => idClassToGenerate.Type switch {
-            OpenFgaTypeIdType.Guid =>
-                $"GuidIdTypeConverter<{idClassToGenerate.ClassName}>(g => new {idClassToGenerate.ClassName}(g), s => {idClassToGenerate.ClassName}.Parse(s))",
+            OpenFgaTypeIdType.Guid
+                => $"GuidIdTypeConverter<{idClassToGenerate.ClassName}>(g => new {idClassToGenerate.ClassName}(g), s => {idClassToGenerate.ClassName}.Parse(s))",
+            OpenFgaTypeIdType.String
+                => $"StringIdTypeConverter<{idClassToGenerate.ClassName}>(s => {idClassToGenerate.ClassName}.Parse(s))",
+            _ => throw new ArgumentOutOfRangeException(),
         };
 
     private static string GetJsonConverter(IdClassToGenerateData idClassToGenerate) {

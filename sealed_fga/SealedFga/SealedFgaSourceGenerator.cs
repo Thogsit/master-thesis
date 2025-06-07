@@ -9,6 +9,7 @@ using OpenFga.Language;
 using OpenFga.Language.Model;
 using SealedFga.Attributes;
 using SealedFga.Generators;
+using SealedFga.Generators.AuthModel;
 using SealedFga.Generators.ModelBinder;
 using SealedFga.Models;
 
@@ -86,8 +87,8 @@ public class SealedFgaSourceGenerator : IIncrementalGenerator {
 
     private static void GenerateNonIncrementalSourceFiles(IncrementalGeneratorPostInitializationContext context) {
         var generatedFiles = new List<GeneratedFile>([
-                IOpenFgaTypeIdWithoutAssociatedIdTypeGenerator.Generate(),
-                IOpenFgaTypeIdGenerator.Generate(),
+                OpenFgaTypeIdWithoutAssociatedIdTypeInterfaceGenerator.Generate(),
+                OpenFgaTypeIdInterfaceGenerator.Generate(),
                 SealedFgaExtensionsGenerator.Generate(),
                 OpenFgaRelationInterfacesGenerator.Generate(),
                 GuidIdTypeConverterGenerator.Generate(),
@@ -147,11 +148,11 @@ public class SealedFgaSourceGenerator : IIncrementalGenerator {
         }
 
         // Generate the partial class for the OpenFGA ID type
-        var generatedIdFile = _TypeName_IdGenerator.Generate(idClassToGenerate);
+        var generatedIdFile = TypeNameIdGenerator.Generate(idClassToGenerate);
         context.AddSource(generatedIdFile.FileName, generatedIdFile.BuildFullFileContent());
 
         // Generate the relation types for the OpenFGA ID type
-        var generatedRelationFiles = _TypeName_RelationsGenerator.Generate(authModel, idClassToGenerate);
+        var generatedRelationFiles = TypeNameRelationsGenerator.Generate(authModel, idClassToGenerate);
         foreach (var generatedRelationsFile in generatedRelationFiles) {
             context.AddSource(generatedRelationsFile.FileName, generatedRelationsFile.BuildFullFileContent());
         }
