@@ -1,7 +1,6 @@
 namespace SealedFga.Models;
 
-public enum OpenFgaTypeIdType
-{
+public enum OpenFgaTypeIdType {
     String,
     Guid,
 }

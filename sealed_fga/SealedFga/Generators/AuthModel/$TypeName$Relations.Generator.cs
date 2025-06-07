@@ -6,8 +6,7 @@ using SealedFga.Util;
 
 namespace SealedFga.Generators;
 
-public static class _TypeName_RelationsGenerator
-{
+public static class _TypeName_RelationsGenerator {
     private static GeneratedFile BuildRelationFile(
         string classNamespace,
         string className,
@@ -25,26 +24,22 @@ public static class _TypeName_RelationsGenerator
           }
           """,
         new HashSet<string>([
-            Settings.PackageNamespace,
-        ]),
+                Settings.PackageNamespace,
+            ]
+        ),
         classNamespace
     );
-    
-    public static List<GeneratedFile> Generate(AuthorizationModel authModel, IdClassToGenerateData idClassToGenerate)
-    {
+
+    public static List<GeneratedFile> Generate(AuthorizationModel authModel, IdClassToGenerateData idClassToGenerate) {
         var relationFiles = new List<GeneratedFile>();
         var relationNames = authModel.TypeDefinitions.FirstOrDefault(td => td.Type == idClassToGenerate.TypeName);
-        if (relationNames is null)
-        {
-            return relationFiles;
-        }
+        if (relationNames is null) return relationFiles;
 
         var relAttributesClassName = idClassToGenerate.ClassName + "Attributes";
         var relGroupsClassName = idClassToGenerate.ClassName + "Groups";
         var attrRelations = relationNames.Relations!.Keys.Where(rel => char.IsLower(rel[0])).ToList();
         var groupRelations = relationNames.Relations!.Keys.Where(rel => char.IsUpper(rel[0])).ToList();
-        if (attrRelations.Count > 0)
-        {
+        if (attrRelations.Count > 0) {
             relationFiles.Add(
                 BuildRelationFile(
                     idClassToGenerate.ClassNamespace,
@@ -55,8 +50,7 @@ public static class _TypeName_RelationsGenerator
             );
         }
 
-        if (groupRelations.Count > 0)
-        {
+        if (groupRelations.Count > 0) {
             relationFiles.Add(
                 BuildRelationFile(
                     idClassToGenerate.ClassNamespace,
@@ -71,10 +65,8 @@ public static class _TypeName_RelationsGenerator
     }
 
     private static string GetEnumFields(string className, List<string> relNames)
-    {
-        return GeneratorUtil.BuildLinesWithIndent(
+        => GeneratorUtil.BuildLinesWithIndent(
             relNames.Select(rel => $"public static readonly {className} {rel} = new {className}(\"{rel}\");"),
             4
         );
-    }
 }

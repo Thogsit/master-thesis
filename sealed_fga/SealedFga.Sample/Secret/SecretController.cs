@@ -13,26 +13,19 @@ public record UpdateSecretRequestDto(string Value);
 public class SecretController(
     SealedFgaSampleContext context,
     ISecretService secretService
-) : ControllerBase
-{
+) : ControllerBase {
     [HttpGet]
     public async Task<IActionResult> GetAllSecrets(
         [FgaAuthorizeList(Relation = nameof(SecretEntityIdAttributes.can_view))]
         List<SecretEntity> secrets
-    )
-    {
-        return Ok(secrets);
-    }
+    ) => Ok(secrets);
 
     [HttpGet("{secretId}")]
     public async Task<IActionResult> GetSecretById(
         [FromRoute] SecretEntityId secretId,
         [FgaAuthorize(Relation = nameof(SecretEntityIdAttributes.can_view), ParameterName = nameof(secretId))]
         SecretEntity secret
-    )
-    {
-        return Ok(secret);
-    }
+    ) => Ok(secret);
 
     [HttpPut("{secretId}")]
     public async Task<IActionResult> UpdateSecretById(
@@ -40,12 +33,9 @@ public class SecretController(
         [FgaAuthorize(Relation = nameof(SecretEntityIdAttributes.can_edit), ParameterName = nameof(secretId))]
         SecretEntity secret,
         [FromBody] UpdateSecretRequestDto updateSecretRequestDto
-    )
-    {
+    ) {
         secret.Value = updateSecretRequestDto.Value;
         await context.SaveChangesAsync();
-        
-        secretService.DependencyInjectionTest();
 
         return Ok(secret);
     }

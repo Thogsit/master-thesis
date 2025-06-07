@@ -11,8 +11,7 @@ public class IdClassToGenerateData(
     string className,
     Location location,
     string underlyingType
-    )
-{
+) {
     public string TypeName { get; } = typeName;
     public OpenFgaTypeIdType Type { get; } = type;
     public string ClassNamespace { get; } = classNamespace;
@@ -24,11 +23,10 @@ public class IdClassToGenerateData(
         AttributeData attributeData,
         ClassDeclarationSyntax classDeclarationSyntax,
         ISymbol classSymbol
-    )
-    {
-        var openFgaType = (OpenFgaTypeIdType)attributeData.ConstructorArguments[1].Value!;
+    ) {
+        var openFgaType = (OpenFgaTypeIdType) attributeData.ConstructorArguments[1].Value!;
         return new IdClassToGenerateData(
-            (string)attributeData.ConstructorArguments[0].Value!,
+            (string) attributeData.ConstructorArguments[0].Value!,
             openFgaType,
             classSymbol.ContainingNamespace.FullName(),
             classDeclarationSyntax.Identifier.Text,
