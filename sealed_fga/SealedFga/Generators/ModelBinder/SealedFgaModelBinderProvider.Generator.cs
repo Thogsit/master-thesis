@@ -9,8 +9,13 @@ public static class SealedFgaModelBinderProviderGenerator {
             "SealedFgaModelBinderProvider.g.cs",
             """
 
+            /// <summary>
+            ///     Provides FGA model binders.
+            /// </summary>
+            /// <typeparam name="TDb">The database context type.</typeparam>
             public class SealedFgaModelBinderProvider<TDb> : IModelBinderProvider
             {
+                /// <inheritdoc />
                 public IModelBinder? GetBinder(ModelBinderProviderContext context)
                 {
                     System.ArgumentNullException.ThrowIfNull(context);

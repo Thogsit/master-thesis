@@ -31,6 +31,9 @@ public static class TypeNameIdGenerator {
                   /// <inheritdoc />
                   public static string OpenFgaTypeName => "{{idClassToGenerate.TypeName}}";
 
+                  /// <summary>
+                  ///     Creates a new instance of <see cref="{{idClassToGenerate.ClassName}}"/> with a generated value.
+                  /// </summary>
                   public static {{idClassToGenerate.ClassName}} New()
                   {
                       return new {{idClassToGenerate.ClassName}}({{GetNewFunction(idClassToGenerate)}});

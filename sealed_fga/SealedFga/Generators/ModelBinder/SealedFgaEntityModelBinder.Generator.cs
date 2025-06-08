@@ -9,6 +9,9 @@ public static class SealedFgaEntityModelBinderGenerator {
             "SealedFgaEntityModelBinder.g.cs",
             """
 
+            /// <summary>
+            ///     Model binder for binding FGA entity parameters annotated with <see cref="FgaAuthorizeAttribute"/>.
+            /// </summary>
             public class SealedFgaEntityModelBinder(Type dbContextType) : SealedFgaModelBinder<FgaAuthorizeAttribute>(dbContextType)
             {
                 /// <summary>
