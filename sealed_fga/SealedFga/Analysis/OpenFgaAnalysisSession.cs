@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -18,16 +19,17 @@ using SealedFga.Models;
 namespace SealedFga.Analysis;
 
 public class OpenFgaAnalysisSession(
-    DiagnosticDescriptor rule,
     INamedTypeSymbol implementedByAttributeSymbol,
     INamedTypeSymbol fgaAuthorizeAttributeSymbol,
     INamedTypeSymbol fgaAuthorizeListAttributeSymbol,
     ImmutableHashSet<INamedTypeSymbol> httpEndpointAttributeSymbols
 ) {
-    private readonly List<HttpEndpointAnalysisContext> _httpEndpointMethodContexts = [];
+    private readonly ConcurrentBag<HttpEndpointAnalysisContext> _httpEndpointMethodContexts = [];
 
-    private readonly Dictionary<INamedTypeSymbol, AttributeData> _implementedByAttributeByInterface =
+    private readonly ConcurrentDictionary<INamedTypeSymbol, AttributeData> _implByAttrByInterface =
         new(SymbolEqualityComparer.Default);
+
+    private readonly ConcurrentDictionary<INamedTypeSymbol, int> _implementerCountByInterface = [];
 
     public void OnSemanticModelDataGathering(SemanticModelAnalysisContext context) {
         var root = context.SemanticModel.SyntaxTree.GetRoot();
@@ -37,23 +39,65 @@ public class OpenFgaAnalysisSession(
             var interfaceSymbol =
                 (INamedTypeSymbol?) context.SemanticModel.GetDeclaredSymbol(interfaceDeclarationSyntax);
 
+            if (interfaceSymbol is null) {
+                continue;
+            }
+
             // Check if the interface has the "ImplementedBy" attribute
-            var implementedByAttributeData = interfaceSymbol?.GetAttributes().FirstOrDefault(attr =>
+            var implementedByAttributeData = interfaceSymbol.GetAttributes().FirstOrDefault(attr =>
                 SymbolEqualityComparer.Default.Equals(attr.AttributeClass, implementedByAttributeSymbol)
             );
-            if (implementedByAttributeData is null) continue;
+            if (implementedByAttributeData is null) {
+                _implementerCountByInterface[interfaceSymbol] = 0;
+            } else {
+                _implByAttrByInterface[interfaceSymbol] = implementedByAttributeData;
+            }
+        }
 
-            _implementedByAttributeByInterface[interfaceSymbol!] = implementedByAttributeData;
+        // Iterate over all classes and count how many implement each interface that we're tracking
+        foreach (var classDeclarationSyntax in root.DescendantNodes().OfType<ClassDeclarationSyntax>()) {
+            var classSymbol = (INamedTypeSymbol?) context.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax);
+
+            if (classSymbol is null) {
+                continue;
+            }
+
+            foreach (var classInterface in classSymbol.Interfaces) {
+                if (_implementerCountByInterface.ContainsKey(classInterface)) {
+                    _implementerCountByInterface[classInterface]++;
+                }
+            }
+        }
+
+        // Every interface that has exactly one implementing class could possibly miss the "ImplementedBy" attribute
+        foreach (var (interfaceSymbol, implCount) in _implementerCountByInterface) {
+            if (implCount != 1) {
+                continue;
+            }
+
+            foreach (var location in interfaceSymbol.Locations) {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        OpenFgaDiagnosticRules.PossiblyMisingImplementedByRule,
+                        location,
+                        interfaceSymbol.Name
+                    )
+                );
+            }
         }
 
         // Parse all http endpoints for later analysis
         foreach (var methodDeclarationSyntax in root.DescendantNodes().OfType<MethodDeclarationSyntax>()) {
             var methodDeclarationSymbol =
                 (IMethodSymbol?) context.SemanticModel.GetDeclaredSymbol(methodDeclarationSyntax);
-            if (methodDeclarationSymbol is null) continue;
+            if (methodDeclarationSymbol is null) {
+                continue;
+            }
 
             // We don't need to analyze methods that are not the direct entry points
-            if (methodDeclarationSymbol.IsAbstract) continue;
+            if (methodDeclarationSymbol.IsAbstract) {
+                continue;
+            }
 
             // Skip non-HTTP methods
             if (!methodDeclarationSymbol.GetAttributes().Any(attr =>
@@ -77,7 +121,7 @@ public class OpenFgaAnalysisSession(
 
         // Build Dependency Injection map
         var interfaceRedirects = new Dictionary<INamedTypeSymbol, INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        foreach (var (interfaceSymbol, implByAttr) in _implementedByAttributeByInterface) {
+        foreach (var (interfaceSymbol, implByAttr) in _implByAttrByInterface) {
             if (implByAttr.ConstructorArguments[0].Value is not INamedTypeSymbol implementingClassSymbol) continue;
 
             interfaceRedirects.Add(interfaceSymbol, implementingClassSymbol.OriginalDefinition);
@@ -138,12 +182,11 @@ public class OpenFgaAnalysisSession(
                     ctx,
                     interfaceRedirects,
                     checkedPermissionsByEntityVar,
-                    context,
-                    rule
+                    context
                 ),
                 wellKnownTypeProvider,
                 context.Options,
-                rule,
+                OpenFgaDiagnosticRules.FoundContextRule,
                 true, // performValueContentAnalysis
                 false, // pessimisticAnalysis
                 out _,
