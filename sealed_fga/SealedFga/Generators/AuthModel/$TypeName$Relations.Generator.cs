@@ -15,11 +15,19 @@ public static class TypeNameRelationsGenerator {
     ) => new(
         $"{className}.g.cs",
         $$"""
+          /// <summary>
+          ///     Represents a set of strongly-typed OpenFGA relations for the {{className}} entity.
+          /// </summary>
           public class {{className}}(string val)
           : OpenFgaRelation(val), IOpenFgaRelationWithImplementingType<{{idClassName}}, {{className}}>
           {
               {{GetEnumFields(className, relNames)}}
 
+              /// <summary>
+              ///     Creates a <see cref="{{className}}"/> from an OpenFGA relation string.
+              /// </summary>
+              /// <param name="openFgaString">The OpenFGA relation string.</param>
+              /// <returns>A new <see cref="{{className}}"/> instance.</returns>
               public static {{className}} FromOpenFgaString(string openFgaString) => new {{className}}(openFgaString);
           }
           """,

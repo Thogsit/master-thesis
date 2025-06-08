@@ -9,8 +9,14 @@ public static class SealedFgaModelBinderGenerator {
             "SealedFgaModelBinder.g.cs",
             """
 
+            /// <summary>
+            ///     Abstract base class for FGA model binders.
+            /// </summary>
+            /// <typeparam name="TAttr">The attribute's type to annotate model binding.</typeparam>
+            /// <param name="dbContextType">The type of the database context.</param>
             public abstract class SealedFgaModelBinder<TAttr>(Type dbContextType) : IModelBinder where TAttr : Attribute
             {
+                /// <inheritdoc />
                 public async Task BindModelAsync(ModelBindingContext context)
                 {
                     ArgumentNullException.ThrowIfNull(context);
@@ -32,9 +38,20 @@ public static class SealedFgaModelBinderGenerator {
                     await FgaBind(context, param, attr);
                 }
 
+                /// <summary>
+                ///     Gets the database context from the model binding context.
+                /// </summary>
+                /// <param name="context">The model binding context.</param>
+                /// <returns>The database context.</returns>
                 protected DbContext GetDbContext(ModelBindingContext context)
                     => (DbContext)context.HttpContext.RequestServices.GetRequiredService(dbContextType);
 
+                /// <summary>
+                ///     Performs the FGA-specific binding logic.
+                /// </summary>
+                /// <param name="context">The model binding context.</param>
+                /// <param name="param">The controller parameter descriptor.</param>
+                /// <param name="attr">The attribute instance.</param>
                 protected abstract Task FgaBind(ModelBindingContext context, ControllerParameterDescriptor param, TAttr attr);
             }
             """,

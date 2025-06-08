@@ -9,6 +9,9 @@ public static class SealedFgaEntityListModelBinderGenerator {
             "SealedFgaEntityListModelBinder.g.cs",
             """
 
+            /// <summary>
+            ///     Model binder for binding FGA entity list parameters annotated with <see cref="FgaAuthorizeListAttribute"/>.
+            /// </summary>
             public class SealedFgaEntityListModelBinder(Type dbContextType)
                 : SealedFgaModelBinder<FgaAuthorizeListAttribute>(dbContextType)
             {
@@ -18,12 +21,12 @@ public static class SealedFgaEntityListModelBinderGenerator {
                 ///     Loads the entities from the DB and injects them into the annotated parameter.
                 /// </summary>
                 /// <example>
-                ///     <code>
+                /// <code>
                 ///     public async Task&lt;IActionResult&gt; GetSecrets(
                 ///         [FgaAuthorizeList(Relation = nameof(SecretEntityIdAttributes.can_view)]
-                ///         List<SecretEntity> secrets
+                ///         List&lt;SecretEntity&gt; secrets
                 ///     );
-                ///     </code>
+                /// </code>
                 /// </example>
                 /// <param name="context">The model binding context.</param>
                 /// <param name="param">The annotated parameter.</param>

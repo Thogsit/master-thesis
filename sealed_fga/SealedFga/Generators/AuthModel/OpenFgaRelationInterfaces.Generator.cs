@@ -11,8 +11,6 @@ public static class OpenFgaRelationInterfacesGenerator {
             ///     Used to strongly type enums for representation of OpenFGA relations.
             /// </summary>
             /// <param name="val">The enum's value, i.e. the OpenFGA relation string, e.g. <c>"can_view"</c>.</param>
-            /// <typeparam name="TObjId">The related object entity ID's type.</typeparam>
-            /// <typeparam name="TEnum">The type of the implementing enum class, e.g. 'UserAttributes'</typeparam>
             public abstract class OpenFgaRelation(string val) {
                 /// <summary>
                 ///     The raw relation name.
@@ -26,9 +24,17 @@ public static class OpenFgaRelationInterfacesGenerator {
                 public string AsOpenFgaString() => Value;
             }
 
+            /// <summary>
+            ///     Used to strongly type enums for representation of OpenFGA relations with an implementing type.
+            /// </summary>
+            /// <typeparam name="TObjId">The related object entity ID's type.</typeparam>
+            /// <typeparam name="TEnum">The type of the implementing enum class, e.g. 'UserAttributes'</typeparam>
             public interface IOpenFgaRelationWithImplementingType<TObjId, TEnum> : IOpenFgaRelation<TObjId>
                 where TObjId : IOpenFgaTypeIdWithoutAssociatedIdType
                 where TEnum : IOpenFgaRelationWithImplementingType<TObjId, TEnum> {
+                /// <summary>
+                ///     The raw relation name.
+                /// </summary>
                 public string Value { get; set; }
 
                 /// <summary>
