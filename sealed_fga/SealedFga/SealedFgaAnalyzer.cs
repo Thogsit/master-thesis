@@ -22,7 +22,7 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer {
         = ImmutableArray.Create(FoundContextRule);
 
     public override void Initialize(AnalysisContext context) {
-        //context.EnableConcurrentExecution(); TODO: Put back in when done with debugging
+        context.EnableConcurrentExecution(); // TODO: Put back in when done with debugging
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
 
         context.RegisterCompilationStartAction(compilationStartContext => {

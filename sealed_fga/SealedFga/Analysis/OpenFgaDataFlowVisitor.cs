@@ -1,20 +1,25 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.GlobalFlowStateAnalysis;
 using Microsoft.CodeAnalysis.Operations;
 using SealedFga.Models;
+using SealedFga.Util;
 
 namespace SealedFga.Analysis;
 
 internal class OpenFgaDataFlowVisitor(
     GlobalFlowStateAnalysisContext analysisContext,
     Dictionary<INamedTypeSymbol, INamedTypeSymbol> interfaceRedirects,
-    CheckedPermissionsByEntityVarDict checkedPermissionsByEntityId
+    CheckedPermissionsByEntityVarDict checkedPermissionsByEntityId,
+    CompilationAnalysisContext diagnosticContext,
+    DiagnosticDescriptor rule
 ) : GlobalFlowStateValueSetFlowOperationVisitor(analysisContext, true) {
     /// <summary>
     ///     Visits a method invocation.
     ///     Overriden to replace the target method if necessary to imitate dependency injection.
+    ///     Also identifies DB context accesses.
     /// </summary>
     public override GlobalFlowStateAnalysisValueSet VisitInvocation_NonLambdaOrDelegateOrLocalFunction(
         IMethodSymbol method,
@@ -22,10 +27,14 @@ internal class OpenFgaDataFlowVisitor(
         ImmutableArray<IArgumentOperation> visitedArguments,
         bool invokedAsDelegate,
         IOperation originalOperation,
-        GlobalFlowStateAnalysisValueSet defaultValue
-    ) {
+        GlobalFlowStateAnalysisValueSet defaultValue) {
+        // Detect context method calls (like SaveChangesAsync)
+        if (visitedInstance != null) {
+            DetectContextMethodCall(method, visitedInstance, originalOperation);
+        }
+
         method = HandleDependencyInjection(method);
-        var value = base.VisitInvocation_NonLambdaOrDelegateOrLocalFunction(
+        return base.VisitInvocation_NonLambdaOrDelegateOrLocalFunction(
             method,
             visitedInstance,
             visitedArguments,
@@ -33,8 +42,6 @@ internal class OpenFgaDataFlowVisitor(
             originalOperation,
             defaultValue
         );
-
-        return value;
     }
 
     /// <summary>
@@ -51,5 +58,32 @@ internal class OpenFgaDataFlowVisitor(
         }
 
         return (implementingClassSymbol.FindImplementationForInterfaceMember(method) as IMethodSymbol)!;
+    }
+
+    private void DetectContextMethodCall(IMethodSymbol method, IOperation instance, IOperation originalOperation) {
+        var instanceType = instance.Type;
+        if (instanceType is INamedTypeSymbol namedType && InheritsFromDbContext(namedType)) {
+            diagnosticContext.ReportDiagnostic(
+                Diagnostic.Create(
+                    rule,
+                    originalOperation.Syntax.GetLocation(),
+                    $"Found DbContext method call: {method.Name} on {namedType.Name}"
+                )
+            );
+        }
+    }
+
+    private bool InheritsFromDbContext(ITypeSymbol typeSymbol) {
+        var baseType = typeSymbol.BaseType;
+        while (baseType != null) {
+            if (baseType.Name == "DbContext" &&
+                baseType.ContainingNamespace.FullName() == "Microsoft.EntityFrameworkCore") {
+                return true;
+            }
+
+            baseType = baseType.BaseType;
+        }
+
+        return false;
     }
 }

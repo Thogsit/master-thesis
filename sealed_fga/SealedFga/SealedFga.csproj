@@ -29,17 +29,24 @@
     <!-- Enable either THIS for the "internal" -> "public" patched DLL file -->
     <Reference Include="Microsoft.CodeAnalysis.AnalyzerUtilities">
       <HintPath>..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll</HintPath>
-      <Private>true</Private>
     </Reference>
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.0" GeneratePathProperty="true" />
     <!-- Or THIS for the real library
-    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" PrivateAssets="all" />-->
+    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" PrivateAssets="all" />
+    -->
   </ItemGroup>
 
+  <!-- This is needed to ensure that the analyzer DLLs are included in the NuGet package.
+       The `Visible` attribute is set to false to prevent them from being visible in the package contents. -->
   <ItemGroup>
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="$(OutputPath)\OpenFga.Language.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <!--<None Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />-->
+    <None Include="$(PkgSystem_Collections_Immutable)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <!--
+    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" PrivateAssets="all" ExcludeAssets="all" GeneratePathProperty="true" />
+    <None Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    -->
   </ItemGroup>
 
 </Project>

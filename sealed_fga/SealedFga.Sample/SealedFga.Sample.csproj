@@ -31,43 +31,27 @@
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" OutputItemType="Analyzer" Version="4.13.1" />
     <Analyzer Include="..\SealedFga\bin\Debug\netstandard2.0\OpenFga.Language.dll" />
-  </ItemGroup>
-  <ItemGroup>
-    <!-- System packages -->
-    <PackageReference Include="System.IO.Pipelines" Version="9.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
-    <Analyzer Include="$(PkgSystem_IO_Pipelines)\lib\netstandard2.0\*.dll" />
-
-    <PackageReference Include="System.Text.Json" Version="9.0.0" OutputItemType="Analyzer" GeneratePathProperty="true"/>
-    <Analyzer Include="$(PkgSystem_Text_Json)\lib\netstandard2.0\*.dll" />
-
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
-    <Analyzer Include="$(PkgMicrosoft_Bcl_AsyncInterfaces)\lib\netstandard2.0\*.dll" />
-
-    <!-- Microsoft.CodeAnalysis packages -->
-
-    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
-    <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" />
-
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.11" OutputItemType="Analyzer" GeneratePathProperty="true" />
-    <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_Analyzers)\analyzers\dotnet\cs\*.dll" />
-
-    <PackageReference Include="Microsoft.AspNetCore.Components.Analyzers" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
-    <Analyzer Include="$(PkgMicrosoft_AspNetCore_Components_Analyzers)\analyzers\dotnet\cs\*.dll" />
-
-    <!-- Entity Framework packages -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
-    <Analyzer Include="$(PkgMicrosoft_EntityFrameworkCore_Analyzers)\analyzers\dotnet\cs\*.dll" />
-
-    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="8.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
-    <Analyzer Include="$(PkgMicrosoft_Extensions_ObjectPool)\lib\netstandard2.0\*.dll" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" />
     <!-- The patched DLL seems to lead to runtime problems.
     Instead we use the original one as seen above and disable runtime permission checks by mimicking the IgnoresAccessChecksToAttribute
     <Analyzer Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" />-->
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.IO.Pipelines" Version="9.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgSystem_IO_Pipelines)\lib\netstandard2.0\*.dll" />
+    <PackageReference Include="System.Text.Json" Version="9.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgSystem_Text_Json)\lib\netstandard2.0\*.dll" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgMicrosoft_Bcl_AsyncInterfaces)\lib\netstandard2.0\*.dll" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_Analyzers)\analyzers\dotnet\cs\*.dll" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Analyzers" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgMicrosoft_AspNetCore_Components_Analyzers)\analyzers\dotnet\cs\*.dll" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgMicrosoft_EntityFrameworkCore_Analyzers)\analyzers\dotnet\cs\*.dll" />
+    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="8.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgMicrosoft_Extensions_ObjectPool)\lib\netstandard2.0\*.dll" />
   </ItemGroup>
 
   <ItemGroup>
