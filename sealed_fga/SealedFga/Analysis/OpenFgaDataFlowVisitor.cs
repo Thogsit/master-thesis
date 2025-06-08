@@ -18,7 +18,7 @@ internal class OpenFgaDataFlowVisitor(
     /// <summary>
     ///     Visits a method invocation.
     ///     Overriden to replace the target method if necessary to imitate dependency injection.
-    ///     Also identifies DB context accesses.
+    ///     Identifies DB context accesses.
     /// </summary>
     public override GlobalFlowStateAnalysisValueSet VisitInvocation_NonLambdaOrDelegateOrLocalFunction(
         IMethodSymbol method,
@@ -26,8 +26,8 @@ internal class OpenFgaDataFlowVisitor(
         ImmutableArray<IArgumentOperation> visitedArguments,
         bool invokedAsDelegate,
         IOperation originalOperation,
-        GlobalFlowStateAnalysisValueSet defaultValue) {
-        // Detect context method calls (like SaveChangesAsync)
+        GlobalFlowStateAnalysisValueSet defaultValue
+    ) {
         if (visitedInstance != null) {
             DetectContextMethodCall(method, visitedInstance, originalOperation);
         }

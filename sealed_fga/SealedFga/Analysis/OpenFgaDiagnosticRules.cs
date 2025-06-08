@@ -19,6 +19,7 @@ public static class OpenFgaDiagnosticRules {
         "Possibly missing ImplementedBy attribute on interface {0}",
         "Usage",
         DiagnosticSeverity.Warning,
-        true
+        true,
+        customTags: [WellKnownDiagnosticTags.CompilationEnd]
     );
 }

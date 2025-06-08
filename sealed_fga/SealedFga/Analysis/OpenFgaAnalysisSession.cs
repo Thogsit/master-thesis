@@ -29,8 +29,15 @@ public class OpenFgaAnalysisSession(
     private readonly ConcurrentDictionary<INamedTypeSymbol, AttributeData> _implByAttrByInterface =
         new(SymbolEqualityComparer.Default);
 
-    private readonly ConcurrentDictionary<INamedTypeSymbol, int> _implementerCountByInterface = [];
+    private readonly ConcurrentDictionary<INamedTypeSymbol, int> _implementerCountByInterface =
+        new(SymbolEqualityComparer.Default);
 
+    /// <summary>
+    ///     Triggered after a semantic model is built for a syntax tree.
+    ///     Gathers everything we need to know for further analysis from it.
+    ///     Could be run concurrently by the compiler.
+    /// </summary>
+    /// <param name="context">The semantic model analysis context.</param>
     public void OnSemanticModelDataGathering(SemanticModelAnalysisContext context) {
         var root = context.SemanticModel.SyntaxTree.GetRoot();
 
@@ -69,23 +76,6 @@ public class OpenFgaAnalysisSession(
             }
         }
 
-        // Every interface that has exactly one implementing class could possibly miss the "ImplementedBy" attribute
-        foreach (var (interfaceSymbol, implCount) in _implementerCountByInterface) {
-            if (implCount != 1) {
-                continue;
-            }
-
-            foreach (var location in interfaceSymbol.Locations) {
-                context.ReportDiagnostic(
-                    Diagnostic.Create(
-                        OpenFgaDiagnosticRules.PossiblyMisingImplementedByRule,
-                        location,
-                        interfaceSymbol.Name
-                    )
-                );
-            }
-        }
-
         // Parse all http endpoints for later analysis
         foreach (var methodDeclarationSyntax in root.DescendantNodes().OfType<MethodDeclarationSyntax>()) {
             var methodDeclarationSymbol =
@@ -116,8 +106,32 @@ public class OpenFgaAnalysisSession(
         }
     }
 
+    /// <summary>
+    ///     Triggered after the compilation is done and all semantic models have been built.
+    ///     Uses the gathered data to run the actual analysis.
+    ///     This is run only once per compilation, so not concurrently.
+    ///     This is where we report diagnostics and perform the main analysis.
+    /// </summary>
+    /// <param name="context">The compilation analysis context.</param>
     public void OnCompilationEndRunAnalysis(CompilationAnalysisContext context) {
         var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(context.Compilation);
+
+        // Every interface that has exactly one implementing class could possibly miss the "ImplementedBy" attribute
+        foreach (var (interfaceSymbol, implCount) in _implementerCountByInterface) {
+            if (implCount != 1) {
+                continue;
+            }
+
+            foreach (var location in interfaceSymbol.Locations) {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        OpenFgaDiagnosticRules.PossiblyMisingImplementedByRule,
+                        location,
+                        interfaceSymbol.Name
+                    )
+                );
+            }
+        }
 
         // Build Dependency Injection map
         var interfaceRedirects = new Dictionary<INamedTypeSymbol, INamedTypeSymbol>(SymbolEqualityComparer.Default);
@@ -175,6 +189,7 @@ public class OpenFgaAnalysisSession(
                 }
             }
 
+            // Execute the data flow analysis for the current HTTP endpoint method
             _ = GlobalFlowStateAnalysis.TryGetOrComputeResult(
                 cfg,
                 httpEndpointMethodContext.MethodSymbol,
