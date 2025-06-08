@@ -5,7 +5,7 @@ using SealedFga.Models;
 namespace SealedFga.Sample.Secret;
 
 [OpenFgaTypeId("secret", OpenFgaTypeIdType.Guid)]
-public partial class SecretEntityId;
+public class SecretEntityId;
 
 public class SecretEntity {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

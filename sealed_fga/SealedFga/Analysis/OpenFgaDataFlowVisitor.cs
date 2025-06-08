@@ -13,8 +13,7 @@ internal class OpenFgaDataFlowVisitor(
     GlobalFlowStateAnalysisContext analysisContext,
     Dictionary<INamedTypeSymbol, INamedTypeSymbol> interfaceRedirects,
     CheckedPermissionsByEntityVarDict checkedPermissionsByEntityId,
-    CompilationAnalysisContext diagnosticContext,
-    DiagnosticDescriptor rule
+    CompilationAnalysisContext diagnosticContext
 ) : GlobalFlowStateValueSetFlowOperationVisitor(analysisContext, true) {
     /// <summary>
     ///     Visits a method invocation.
@@ -65,7 +64,7 @@ internal class OpenFgaDataFlowVisitor(
         if (instanceType is INamedTypeSymbol namedType && InheritsFromDbContext(namedType)) {
             diagnosticContext.ReportDiagnostic(
                 Diagnostic.Create(
-                    rule,
+                    OpenFgaDiagnosticRules.FoundContextRule,
                     originalOperation.Syntax.GetLocation(),
                     $"Found DbContext method call: {method.Name} on {namedType.Name}"
                 )

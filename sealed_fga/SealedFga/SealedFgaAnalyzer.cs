@@ -9,17 +9,10 @@ namespace SealedFga;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class SealedFgaAnalyzer : DiagnosticAnalyzer {
-    private static readonly DiagnosticDescriptor FoundContextRule = new(
-        "SFGA003",
-        "Found context",
-        "Found context",
-        "Usage",
-        DiagnosticSeverity.Warning,
-        true
-    );
-
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; }
-        = ImmutableArray.Create(FoundContextRule);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = [
+        OpenFgaDiagnosticRules.FoundContextRule,
+        OpenFgaDiagnosticRules.PossiblyMisingImplementedByRule,
+    ];
 
     public override void Initialize(AnalysisContext context) {
         context.EnableConcurrentExecution(); // TODO: Put back in when done with debugging
@@ -44,7 +37,6 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer {
 
                 // Register the analysis sessions' handlers
                 var analysisSession = new OpenFgaAnalysisSession(
-                    FoundContextRule,
                     implementedByAttributeSymbol,
                     fgaAuthorizeAttributeSymbol,
                     fgaAuthorizeListAttributeSymbol,
