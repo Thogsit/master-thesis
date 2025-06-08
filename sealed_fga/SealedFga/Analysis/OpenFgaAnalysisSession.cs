@@ -83,7 +83,7 @@ public class OpenFgaAnalysisSession(
             interfaceRedirects.Add(interfaceSymbol, implementingClassSymbol.OriginalDefinition);
         }
 
-        // Analyse all http endpoints
+        // Analyze all http endpoints
         foreach (var httpEndpointMethodContext in _httpEndpointMethodContexts) {
             var cfg = ControlFlowGraph.Create(
                 httpEndpointMethodContext.MethodSyntax,
@@ -137,7 +137,9 @@ public class OpenFgaAnalysisSession(
                 ctx => new OpenFgaDataFlowVisitor(
                     ctx,
                     interfaceRedirects,
-                    checkedPermissionsByEntityVar
+                    checkedPermissionsByEntityVar,
+                    context,
+                    rule
                 ),
                 wellKnownTypeProvider,
                 context.Options,

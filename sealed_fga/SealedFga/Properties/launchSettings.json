@@ -1,9 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "DebugRoslynSourceGenerator": {
+    "DebugRoslynSourceGenerator (SealedFga.Sample)": {
       "commandName": "DebugRoslynComponent",
       "targetProject": "../SealedFga.Sample/SealedFga.Sample.csproj"
+    },
+    "DebugRoslynSourceGenerator (SCBackend)": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "../../../sc-sealed_fga/SCBackend/SCBackend.csproj"
     }
   }
 }

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SealedFga.ModelBinding;
 using SealedFga.Sample.Database;
 
@@ -35,6 +37,9 @@ public class SecretController(
     ) {
         secret.Value = updateSecretRequestDto.Value;
         await context.SaveChangesAsync();
+
+        var secrets = await context.SecretEntities.ToListAsync();
+        var secretsSync = context.SecretEntities.ToList();
 
         return Ok(secret);
     }
