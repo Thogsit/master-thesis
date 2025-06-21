@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SealedFga.Database;
 using SealedFga.ModelBinding;
 using SealedFga.Sample.Database;
 using SealedFga.Sample.Secret;
@@ -32,6 +33,10 @@ public static class Program {
             var context = scope.ServiceProvider.GetRequiredService<SealedFgaSampleContext>();
             context.Database.EnsureCreated();
         }
+
+        // TODO: This should be done more generally applicable
+        var queue = new FgaQueueProcessor();
+        queue.Start();
 
         app.Run();
     }

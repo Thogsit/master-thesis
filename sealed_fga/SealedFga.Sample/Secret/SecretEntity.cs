@@ -7,9 +7,9 @@ namespace SealedFga.Sample.Secret;
 [OpenFgaTypeId("secret", OpenFgaTypeIdType.Guid)]
 public partial class SecretEntityId;
 
-public class SecretEntity {
+public class SecretEntity : IOpenFgaType<SecretEntityId> {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public SecretEntityId Id { get; init; } = null!;
+    public SecretEntityId Id { get; set; } = null!;
 
     public required string Value { get; set; }
 }

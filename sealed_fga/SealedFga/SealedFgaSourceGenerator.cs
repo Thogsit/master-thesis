@@ -89,9 +89,10 @@ public class SealedFgaSourceGenerator : IIncrementalGenerator {
         var generatedFiles = new List<GeneratedFile>([
                 OpenFgaTypeIdWithoutAssociatedIdTypeInterfaceGenerator.Generate(),
                 OpenFgaTypeIdInterfaceGenerator.Generate(),
-                SealedFgaExtensionsGenerator.Generate(),
+                OpenFgaTypeInterfaceGenerator.Generate(),
                 OpenFgaRelationInterfacesGenerator.Generate(),
                 GuidIdTypeConverterGenerator.Generate(),
+                SealedFgaExtensionsGenerator.Generate(),
                 FgaAuthorizeAttributeGenerator.Generate(),
                 FgaAuthorizeListAttributeGenerator.Generate(),
                 SealedFgaEntityListModelBinderGenerator.Generate(),

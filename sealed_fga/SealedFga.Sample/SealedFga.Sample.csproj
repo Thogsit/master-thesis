@@ -33,6 +33,8 @@
     <Analyzer Include="..\SealedFga\bin\Debug\netstandard2.0\OpenFga.Language.dll" />
     <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.6" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgMicrosoft_Data_Sqlite)\lib\netstandard2.0\*.dll" />
     <!-- The patched DLL seems to lead to runtime problems.
     Instead we use the original one as seen above and disable runtime permission checks by mimicking the IgnoresAccessChecksToAttribute
     <Analyzer Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" />-->

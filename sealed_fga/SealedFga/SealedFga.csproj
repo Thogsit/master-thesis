@@ -21,6 +21,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.6" PrivateAssets="all" GeneratePathProperty="true"/>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
     <ProjectReference Include="..\..\openfga-language\pkg\csharp\OpenFga.Language.csproj" PrivateAssets="all" />
   </ItemGroup>
@@ -42,11 +43,15 @@
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="$(OutputPath)\OpenFga.Language.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="$(PkgSystem_Collections_Immutable)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(PkgMicrosoft_Data_Sqlite)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <!--
     <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" PrivateAssets="all" ExcludeAssets="all" GeneratePathProperty="true" />
     <None Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     -->
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Generators\SealedFgaDb\" />
   </ItemGroup>
 
 </Project>

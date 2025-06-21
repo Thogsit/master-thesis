@@ -8,7 +8,7 @@ public static class OpenFgaTypeIdInterfaceGenerator {
             "IOpenFgaTypeId.g.cs",
             """
             /// <summary>
-            ///     Abstract base class for type IDs for OpenFGA object entities.
+            ///     Interface for type IDs for OpenFGA object entities.
             /// </summary>
             public interface IOpenFgaTypeId<out TId> : IOpenFgaTypeIdWithoutAssociatedIdType where TId : IOpenFgaTypeId<TId> {
                 /// <summary>

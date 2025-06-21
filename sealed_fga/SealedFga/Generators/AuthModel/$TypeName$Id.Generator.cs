@@ -46,6 +46,10 @@ public static class TypeNameIdGenerator {
                   }
 
                   /// <inheritdoc />
+                  public string AsOpenFgaIdTupleString()
+                      => $"{OpenFgaTypeName}:{ToString()}";
+
+                  /// <inheritdoc />
                   public override string ToString()
                   {
                       return Value.ToString();
