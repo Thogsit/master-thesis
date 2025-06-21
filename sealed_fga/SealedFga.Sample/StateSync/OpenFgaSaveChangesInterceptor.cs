@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using OpenFga.Sdk.Client.Model;
 using SealedFga.Attributes;
+using SealedFga.Database;
 
 namespace SealedFga.Sample.StateSync;
 
@@ -126,6 +127,22 @@ public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
                 }
             }
         }
+
+        // Writes the FGA relations to the database
+        SealedFgaDb.Instance.AddFgaOperations([
+            ..writeRelations.Select(wr => new FgaOperation(
+                FgaOperationType.Write,
+                wr.User,
+                wr.Relation,
+                wr.Object
+            )),
+           ..deletedRelations.Select(dr => new FgaOperation(
+                FgaOperationType.Delete,
+                dr.User,
+                dr.Relation,
+                dr.Object
+            )),
+        ]);
 
         return base.SavedChangesAsync(eventData, result, cancellationToken);
     }

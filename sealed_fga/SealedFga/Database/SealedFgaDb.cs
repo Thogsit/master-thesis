@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 
 namespace SealedFga.Database;
@@ -59,6 +60,49 @@ public class SealedFgaDb {
         cmd.ExecuteNonQuery();
     }
 
+    /// <summary>
+    ///     Enqueues multiple FGA operations to be processed later.
+    /// </summary>
+    /// <param name="operations">The list of FGA operations to add</param>
+    public void AddFgaOperations(IEnumerable<FgaOperation> operations) {
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction();
+
+        try {
+            const string insertSql = """
+                                     INSERT INTO fga_queue (operation_type, user_val, relation_val, object_val)
+                                     VALUES (@operationType, @userVal, @relationVal, @objectVal);
+                                     """;
+
+            using var cmd = new SqliteCommand(insertSql, connection, transaction);
+
+            // Prepare parameters once
+            var operationTypeParam = cmd.Parameters.Add("@operationType", SqliteType.Text);
+            var userValParam = cmd.Parameters.Add("@userVal", SqliteType.Text);
+            var relationValParam = cmd.Parameters.Add("@relationVal", SqliteType.Text);
+            var objectValParam = cmd.Parameters.Add("@objectVal", SqliteType.Text);
+
+            cmd.Prepare();
+
+            foreach (var operation in operations) {
+                operationTypeParam.Value = operation.OperationType;
+                userValParam.Value = operation.RawUser;
+                relationValParam.Value = operation.Relation;
+                objectValParam.Value = operation.RawObject;
+
+                cmd.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+        } catch {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    /// <summary>
+    ///     Makes sure the database is created and initialized.
+    /// </summary>
     private void InitializeDatabase() {
         using var connection = OpenConnection();
 

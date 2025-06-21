@@ -50,8 +50,5 @@
     <None Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     -->
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Generators\SealedFgaDb\" />
-  </ItemGroup>
 
 </Project>
