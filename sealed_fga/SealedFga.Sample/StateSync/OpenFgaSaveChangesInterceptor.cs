@@ -17,26 +17,30 @@ namespace SealedFga.Sample.StateSync;
 /// </summary>
 public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
     /// <inheritdoc />
-    public override ValueTask<int> SavedChangesAsync(
-        SaveChangesCompletedEventData eventData,
-        int result,
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
         CancellationToken cancellationToken = new()
     ) {
         var context = eventData.Context;
         if (context is null) {
-            return base.SavedChangesAsync(eventData, result, cancellationToken);
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
         }
 
         // Filter for modified entries
         var writeRelations = new List<ClientTupleKey>();
         var deletedRelations = new List<ClientTupleKeyWithoutCondition>();
+        var entries = context.ChangeTracker.Entries();
         foreach (var entry in context.ChangeTracker
                                      .Entries()
                                      .Where(e => e.State
                                                      is EntityState.Deleted
                                                         or EntityState.Modified
                                                         or EntityState.Added
-                                                 && e.Entity.GetType().IsAssignableTo(typeof(IOpenFgaType<>))
+                                                 && e.Entity.GetType().GetInterfaces().Any(i =>
+                                                     i.IsGenericType && i.GetGenericTypeDefinition() ==
+                                                     typeof(IOpenFgaType<>)
+                                                 )
                                       )) {
             var entityType = entry.Entity.GetType();
             var entityIdProperty = entry.Property(nameof(IOpenFgaType<>.Id));
@@ -51,18 +55,22 @@ public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
                 var entryProperty = entry.Property(property.Name);
 
                 // Retrieve foreign key object's ID value
-                var propertyOpenFgaTupleString = (string)entryProperty.CurrentValue!
-                                                                      .GetType()
-                                                                      .GetMethod(
-                                                                           nameof(IOpenFgaTypeId<>.AsOpenFgaIdTupleString)
-                                                                       )!
-                                                                      .Invoke(entryProperty.CurrentValue, null)!;
+                var propertyIdTypeAsOpenFgaIdTupleStringMethod = property
+                                                                .PropertyType
+                                                                .GetMethod(nameof(IOpenFgaTypeId<>
+                                                                    .AsOpenFgaIdTupleString)
+                                                                 );
+                var propertyOpenFgaTupleString = (string) propertyIdTypeAsOpenFgaIdTupleStringMethod
+                   .Invoke(entryProperty.CurrentValue, null)!;
 
                 // Retrieve this entity's OpenFGA ID
-                var entityOpenFgaTupleString = (string)entry.Entity
-                                                            .GetType()
-                                                            .GetMethod(nameof(IOpenFgaType<>.AsOpenFgaIdTupleString))!
-                                                            .Invoke(entry.Entity, null)!;
+                var entityIdTypeAsOpenFgaIdTupleStringMethod = entityIdProperty
+                                                              .CurrentValue!
+                                                              .GetType()
+                                                              .GetMethod(nameof(IOpenFgaTypeId<>.AsOpenFgaIdTupleString)
+                                                               )!;
+                var entityOpenFgaTupleString = (string) entityIdTypeAsOpenFgaIdTupleStringMethod
+                   .Invoke(entityIdProperty.CurrentValue, null)!;
 
                 // Switch obj <-> user based on the relation's target type
                 var (userTupleStr, objTupleStr) = attr.TargetType switch {
@@ -94,25 +102,28 @@ public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
 
                 // Entity is modified -> write current and remove previous values
                 else if (entry.State == EntityState.Modified) {
-                    var asOpenFgaIdTupleStrMethod = property
-                        .PropertyType
-                        .GetMethod(nameof(IOpenFgaTypeId<>.AsOpenFgaIdTupleString))!;
-                    var curIdTupleStr = (string)asOpenFgaIdTupleStrMethod
-                       .Invoke(entityIdProperty.CurrentValue, null)!;
-                    var prevIdTupleStr = (string)asOpenFgaIdTupleStrMethod
-                       .Invoke(entryProperty.OriginalValue, null)!;
-
                     // Only do anything if the ID has actually changed
-                    if (curIdTupleStr == prevIdTupleStr) {
+                    if (entityIdProperty.CurrentValue == entityIdProperty.OriginalValue
+                        && entryProperty.CurrentValue == entryProperty.OriginalValue) {
                         continue;
                     }
+
+                    // Retrieve previous values and correctly set them as user/object
+                    var prevPropertyIdTupleStr = (string) propertyIdTypeAsOpenFgaIdTupleStringMethod
+                                                .Invoke(entryProperty.OriginalValue, null)!;
+                    var prevIdTupleStr = (string) entityIdTypeAsOpenFgaIdTupleStringMethod
+                        .Invoke(entityIdProperty.OriginalValue, null)!;
+                    var (prevUserTupleStr, prevObjTupleStr) = attr.TargetType switch {
+                        OpenFgaRelationTargetType.Object => (prevPropertyIdTupleStr, prevIdTupleStr),
+                        OpenFgaRelationTargetType.User => (prevIdTupleStr, prevPropertyIdTupleStr),
+                    };
 
                     // Remove previous value
                     deletedRelations.Add(
                         new ClientTupleKeyWithoutCondition {
-                            User = userTupleStr,
+                            User = prevUserTupleStr,
                             Relation = attr.Relation,
-                            Object = prevIdTupleStr,
+                            Object = prevObjTupleStr,
                         }
                     );
 
@@ -121,7 +132,7 @@ public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
                         new ClientTupleKey {
                             User = userTupleStr,
                             Relation = attr.Relation,
-                            Object = curIdTupleStr,
+                            Object = objTupleStr,
                         }
                     );
                 }
@@ -130,21 +141,24 @@ public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
 
         // Writes the FGA relations to the database
         SealedFgaDb.Instance.AddFgaOperations([
-            ..writeRelations.Select(wr => new FgaOperation(
-                FgaOperationType.Write,
-                wr.User,
-                wr.Relation,
-                wr.Object
-            )),
-           ..deletedRelations.Select(dr => new FgaOperation(
-                FgaOperationType.Delete,
-                dr.User,
-                dr.Relation,
-                dr.Object
-            )),
-        ]);
+                ..writeRelations.Select(wr => new FgaOperation(
+                        FgaOperationType.Write,
+                        wr.User,
+                        wr.Relation,
+                        wr.Object
+                    )
+                ),
+                ..deletedRelations.Select(dr => new FgaOperation(
+                        FgaOperationType.Delete,
+                        dr.User,
+                        dr.Relation,
+                        dr.Object
+                    )
+                ),
+            ]
+        );
 
-        return base.SavedChangesAsync(eventData, result, cancellationToken);
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
     public override int SavedChanges(SaveChangesCompletedEventData eventData, int result) {

@@ -43,4 +43,19 @@ public class SecretController(
 
         return Ok(secret);
     }
+
+    [HttpPost("{secretId}/toggle-agency")]
+    public async Task<IActionResult> ToggleAgency(
+        [FromRoute] SecretEntityId secretId,
+        [FgaAuthorize(Relation = nameof(SecretEntityIdAttributes.can_edit), ParameterName = nameof(secretId))]
+        SecretEntity secret
+    ) {
+        var agencies = await context.AgencyEntities.ToListAsync();
+        var newAgency = agencies.First(a => a.Id != secret.OwningAgencyId);
+
+        secret.OwningAgencyId = newAgency.Id;
+        await context.SaveChangesAsync();
+
+        return Ok(secret);
+    }
 }

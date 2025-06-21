@@ -63,9 +63,7 @@ public class FgaQueueProcessor : IDisposable {
             } finally {
                 _processingLock.Release();
             }
-        }
-        catch (Exception)
-        {
+        } catch (Exception) {
             // TODO: Check whether this should be better handled
         }
     }
@@ -81,7 +79,7 @@ public class FgaQueueProcessor : IDisposable {
                                                    SELECT id, operation_type, user_val, relation_val, object_val, attempt_count, last_error
                                                    FROM fga_queue
                                                    WHERE status = '{FgaOperationStatus.Pending}'
-                                                   AND next_retry_at <= CURRENT_TIMESTAMP
+                                                   AND next_retry_at <= strftime('%Y-%m-%d %H:%M:%f', 'now')
                                                    ORDER BY created_at ASC
                                                    LIMIT 100
                                                    """;
@@ -175,7 +173,7 @@ public class FgaQueueProcessor : IDisposable {
         cmd.Parameters.AddWithValue("@status", status);
         cmd.Parameters.AddWithValue("@attemptCount", newAttemptCount);
         cmd.Parameters.AddWithValue("@lastError", errorMessage);
-        cmd.Parameters.AddWithValue("@nextRetryAt", nextRetryAt.ToString("yyyy-MM-dd HH:mm:ss"));
+        cmd.Parameters.AddWithValue("@nextRetryAt", nextRetryAt.ToString("yyyy-MM-dd HH:mm:ss.ffffff"));
         await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 

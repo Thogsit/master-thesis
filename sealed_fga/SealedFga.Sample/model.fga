@@ -1,9 +1,16 @@
 model
   schema 1.1
 
+# Represents some person; will be used later
+type user
+
+# Used as a parent (="User") for secrets
+type agency
+
+# Used as an object
 type secret
   relations
-    define SomeGroup: [user]
+    # Annotated via [OpenFgaRelation] in the entity
+    define OwnedBy: [agency]
     define can_view: [user]
     define can_edit: [user]
-

@@ -121,9 +121,9 @@ public class SealedFgaDb {
                                            user_val TEXT NOT NULL,
                                            relation_val TEXT NOT NULL,
                                            object_val TEXT NOT NULL,
-                                           -- Retry related data
-                                           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                           next_retry_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                           -- Retry related data with microsecond precision
+                                           created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+                                           next_retry_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
                                            last_error TEXT,
                                            attempt_count INTEGER DEFAULT 0,
                                            status TEXT DEFAULT '{FgaOperationStatus.Pending}' CHECK ( status IN ( '{FgaOperationStatus.Success}', '{FgaOperationStatus.Failure}', '{FgaOperationStatus.Pending}' ) )
