@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using OpenFga.Sdk.Client.Model;
 using SealedFga.Attributes;
@@ -22,148 +23,263 @@ public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
         InterceptionResult<int> result,
         CancellationToken cancellationToken = new()
     ) {
-        var context = eventData.Context;
+        ProcessOpenFgaChanges(eventData.Context);
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData eventData,
+        InterceptionResult<int> result
+    ) {
+        ProcessOpenFgaChanges(eventData.Context);
+        return base.SavingChanges(eventData, result);
+    }
+
+    /// <summary>
+    ///     Main method that processes OpenFGA changes for a given DbContext.
+    /// </summary>
+    /// <param name="context">The DbContext to process changes for.</param>
+    private void ProcessOpenFgaChanges(DbContext? context) {
         if (context is null) {
-            return base.SavingChangesAsync(eventData, result, cancellationToken);
+            return;
         }
 
-        // Filter for modified entries
-        var writeRelations = new List<ClientTupleKey>();
-        var deletedRelations = new List<ClientTupleKeyWithoutCondition>();
-        var entries = context.ChangeTracker.Entries();
-        foreach (var entry in context.ChangeTracker
+        // Filters the change tracker for all entries that can possibly change OpenFGA relations
+        var relevantEntries = context.ChangeTracker
                                      .Entries()
                                      .Where(e => e.State
                                                      is EntityState.Deleted
                                                         or EntityState.Modified
                                                         or EntityState.Added
-                                                 && e.Entity.GetType().GetInterfaces().Any(i =>
-                                                     i.IsGenericType && i.GetGenericTypeDefinition() ==
-                                                     typeof(IOpenFgaType<>)
-                                                 )
-                                      )) {
-            var entityType = entry.Entity.GetType();
-            var entityIdProperty = entry.Property(nameof(IOpenFgaType<>.Id));
+                                                 && e.Entity.GetType().GetInterfaces()
+                                                     .Any(i =>
+                                                          i.IsGenericType && i.GetGenericTypeDefinition() ==
+                                                          typeof(IOpenFgaType<>)
+                                                      )
+                                      );
 
-            // Search for OpenFGA relations in the entity's properties
-            foreach (var property in entityType.GetProperties()) {
-                var attr = property.GetCustomAttribute<OpenFgaRelationAttribute>();
-                if (attr == null) {
-                    continue;
-                }
-
-                var entryProperty = entry.Property(property.Name);
-
-                // Retrieve foreign key object's ID value
-                var propertyIdTypeAsOpenFgaIdTupleStringMethod = property
-                                                                .PropertyType
-                                                                .GetMethod(nameof(IOpenFgaTypeId<>
-                                                                    .AsOpenFgaIdTupleString)
-                                                                 );
-                var propertyOpenFgaTupleString = (string) propertyIdTypeAsOpenFgaIdTupleStringMethod
-                   .Invoke(entryProperty.CurrentValue, null)!;
-
-                // Retrieve this entity's OpenFGA ID
-                var entityIdTypeAsOpenFgaIdTupleStringMethod = entityIdProperty
-                                                              .CurrentValue!
-                                                              .GetType()
-                                                              .GetMethod(nameof(IOpenFgaTypeId<>.AsOpenFgaIdTupleString)
-                                                               )!;
-                var entityOpenFgaTupleString = (string) entityIdTypeAsOpenFgaIdTupleStringMethod
-                   .Invoke(entityIdProperty.CurrentValue, null)!;
-
-                // Switch obj <-> user based on the relation's target type
-                var (userTupleStr, objTupleStr) = attr.TargetType switch {
-                    OpenFgaRelationTargetType.Object => (propertyOpenFgaTupleString, entityOpenFgaTupleString),
-                    OpenFgaRelationTargetType.User => (entityOpenFgaTupleString, propertyOpenFgaTupleString),
-                };
-
-                // Entity is newly added -> write contained OpenFGA relations
-                if (entry.State == EntityState.Added) {
-                    writeRelations.Add(
-                        new ClientTupleKey {
-                            User = userTupleStr,
-                            Relation = attr.Relation,
-                            Object = objTupleStr,
-                        }
-                    );
-                }
-
-                // Entity is deleted -> remove contained OpenFGA relations
-                else if (entry.State == EntityState.Deleted) {
-                    deletedRelations.Add(
-                        new ClientTupleKeyWithoutCondition {
-                            User = userTupleStr,
-                            Relation = attr.Relation,
-                            Object = objTupleStr,
-                        }
-                    );
-                }
-
-                // Entity is modified -> write current and remove previous values
-                else if (entry.State == EntityState.Modified) {
-                    // Only do anything if the ID has actually changed
-                    if (entityIdProperty.CurrentValue == entityIdProperty.OriginalValue
-                        && entryProperty.CurrentValue == entryProperty.OriginalValue) {
-                        continue;
-                    }
-
-                    // Retrieve previous values and correctly set them as user/object
-                    var prevPropertyIdTupleStr = (string) propertyIdTypeAsOpenFgaIdTupleStringMethod
-                                                .Invoke(entryProperty.OriginalValue, null)!;
-                    var prevIdTupleStr = (string) entityIdTypeAsOpenFgaIdTupleStringMethod
-                        .Invoke(entityIdProperty.OriginalValue, null)!;
-                    var (prevUserTupleStr, prevObjTupleStr) = attr.TargetType switch {
-                        OpenFgaRelationTargetType.Object => (prevPropertyIdTupleStr, prevIdTupleStr),
-                        OpenFgaRelationTargetType.User => (prevIdTupleStr, prevPropertyIdTupleStr),
-                    };
-
-                    // Remove previous value
-                    deletedRelations.Add(
-                        new ClientTupleKeyWithoutCondition {
-                            User = prevUserTupleStr,
-                            Relation = attr.Relation,
-                            Object = prevObjTupleStr,
-                        }
-                    );
-
-                    // Write current value
-                    writeRelations.Add(
-                        new ClientTupleKey {
-                            User = userTupleStr,
-                            Relation = attr.Relation,
-                            Object = objTupleStr,
-                        }
-                    );
-                }
-            }
+        // Retrieve OpenFGA relations to write/delete
+        var writeRelations = new List<ClientTupleKey>();
+        var deleteRelations = new List<ClientTupleKeyWithoutCondition>();
+        foreach (var entry in relevantEntries) {
+            ProcessSingleEntityEntry(entry, ref writeRelations, ref deleteRelations);
         }
 
-        // Writes the FGA relations to the database
+        // Save the relations to the SealedFGA database
         SealedFgaDb.Instance.AddFgaOperations([
-                ..writeRelations.Select(wr => new FgaOperation(
-                        FgaOperationType.Write,
-                        wr.User,
-                        wr.Relation,
-                        wr.Object
-                    )
-                ),
-                ..deletedRelations.Select(dr => new FgaOperation(
-                        FgaOperationType.Delete,
-                        dr.User,
-                        dr.Relation,
-                        dr.Object
-                    )
-                ),
-            ]
-        );
-
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
+            ..writeRelations.Select(wr => new FgaOperation(
+                    FgaOperationType.Write,
+                    wr.User,
+                    wr.Relation,
+                    wr.Object
+                )
+            ),
+            ..deleteRelations.Select(dr => new FgaOperation(
+                    FgaOperationType.Delete,
+                    dr.User,
+                    dr.Relation,
+                    dr.Object
+                )
+            ),
+        ]);
     }
 
-    public override int SavedChanges(SaveChangesCompletedEventData eventData, int result) {
-        // TODO: Implement!
+    /// <summary>
+    ///     Processes a single entity entry to extract OpenFGA relations.
+    /// </summary>
+    /// <param name="entry">The entity entry to process.</param>
+    /// <param name="writeRelations">List to populate with relations to write.</param>
+    /// <param name="deleteRelations">List to populate with relations to delete.</param>
+    private static void ProcessSingleEntityEntry(
+        EntityEntry entry,
+        ref List<ClientTupleKey> writeRelations,
+        ref List<ClientTupleKeyWithoutCondition> deleteRelations
+    ) {
+        var entityType = entry.Entity.GetType();
+        var entityIdProperty = entry.Property(nameof(IOpenFgaType<>.Id));
 
-        return base.SavedChanges(eventData, result);
+        foreach (var property in entityType
+                                .GetProperties()
+                                .Where(prop => prop.GetCustomAttribute<OpenFgaRelationAttribute>() != null)) {
+            var attr = property.GetCustomAttribute<OpenFgaRelationAttribute>()!;
+            var entryProperty = entry.Property(property.Name);
+
+            ProcessEntityPropertyRelation(
+                entry.State,
+                attr,
+                entityIdProperty,
+                entryProperty,
+                ref writeRelations,
+                ref deleteRelations
+            );
+        }
+    }
+
+    /// <summary>
+    ///     Processes a single property relation for an entity based on its state.
+    /// </summary>
+    /// <param name="entityState">The state of the entity (Added, Modified, Deleted).</param>
+    /// <param name="relationAttribute">The OpenFGA relation attribute.</param>
+    /// <param name="entityIdProperty">The entity's ID property.</param>
+    /// <param name="relationProperty">The relation property being processed.</param>
+    /// <param name="writeRelations">List to populate with relations to write.</param>
+    /// <param name="deleteRelations">List to populate with relations to delete.</param>
+    private static void ProcessEntityPropertyRelation(
+        EntityState entityState,
+        OpenFgaRelationAttribute relationAttribute,
+        PropertyEntry entityIdProperty,
+        PropertyEntry relationProperty,
+        ref List<ClientTupleKey> writeRelations,
+        ref List<ClientTupleKeyWithoutCondition> deleteRelations
+    ) {
+        // We're only interested in changes, so disable the "default case missing" warning.
+        // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+        switch (entityState) {
+            case EntityState.Added:
+                ProcessAddedEntity(relationAttribute,
+                    entityIdProperty,
+                    relationProperty,
+                    ref writeRelations
+                );
+                break;
+            case EntityState.Deleted:
+                ProcessDeletedEntity(relationAttribute,
+                    entityIdProperty,
+                    relationProperty,
+                    ref deleteRelations
+                );
+                break;
+            case EntityState.Modified:
+                ProcessModifiedEntity(relationAttribute,
+                    entityIdProperty,
+                    relationProperty,
+                    ref writeRelations,
+                    ref deleteRelations
+                );
+                break;
+        }
+    }
+
+    /// <summary>
+    ///     Processes relations for a newly added entity.
+    /// </summary>
+    private static void ProcessAddedEntity(
+        OpenFgaRelationAttribute attr,
+        PropertyEntry entityIdProperty,
+        PropertyEntry relationProperty,
+        ref List<ClientTupleKey> writeRelations
+    ) {
+        var (userTupleStr, objTupleStr) = ExtractTupleStrings(
+            attr,
+            entityIdProperty.CurrentValue,
+            relationProperty.CurrentValue
+        );
+
+        writeRelations.Add(new ClientTupleKey {
+                User = userTupleStr,
+                Relation = attr.Relation,
+                Object = objTupleStr,
+            }
+        );
+    }
+
+    /// <summary>
+    ///     Processes relations for a deleted entity.
+    /// </summary>
+    private static void ProcessDeletedEntity(
+        OpenFgaRelationAttribute attr,
+        PropertyEntry entityIdProperty,
+        PropertyEntry relationProperty,
+        ref List<ClientTupleKeyWithoutCondition> deleteRelations
+    ) {
+        var (userTupleStr, objTupleStr) = ExtractTupleStrings(
+            attr,
+            entityIdProperty.CurrentValue,
+            relationProperty.CurrentValue
+        );
+
+        deleteRelations.Add(new ClientTupleKeyWithoutCondition {
+                User = userTupleStr,
+                Relation = attr.Relation,
+                Object = objTupleStr,
+            }
+        );
+    }
+
+    /// <summary>
+    ///     Processes relations for a modified entity.
+    /// </summary>
+    private static void ProcessModifiedEntity(
+        OpenFgaRelationAttribute attr,
+        PropertyEntry entityIdProperty,
+        PropertyEntry relationProperty,
+        ref List<ClientTupleKey> writeRelations,
+        ref List<ClientTupleKeyWithoutCondition> deleteRelations
+    ) {
+        // Only process if the ID has actually changed
+        if (entityIdProperty.CurrentValue == entityIdProperty.OriginalValue
+            && relationProperty.CurrentValue == relationProperty.OriginalValue) {
+            return;
+        }
+
+        // Process previous values (for deletion)
+        var (prevUserTupleStr, prevObjTupleStr) = ExtractTupleStrings(
+            attr,
+            entityIdProperty.OriginalValue,
+            relationProperty.OriginalValue
+        );
+
+        deleteRelations.Add(new ClientTupleKeyWithoutCondition {
+                User = prevUserTupleStr,
+                Relation = attr.Relation,
+                Object = prevObjTupleStr,
+            }
+        );
+
+        // Process current values (for writing)
+        var (userTupleStr, objTupleStr) = ExtractTupleStrings(
+            attr,
+            entityIdProperty.CurrentValue,
+            relationProperty.CurrentValue
+        );
+
+        writeRelations.Add(new ClientTupleKey {
+                User = userTupleStr,
+                Relation = attr.Relation,
+                Object = objTupleStr,
+            }
+        );
+    }
+
+    /// <summary>
+    ///     Extracts tuple strings from entity and property values using reflection.
+    /// </summary>
+    /// <param name="attr">The OpenFGA relation attribute.</param>
+    /// <param name="entityIdValue">The entity's ID value.</param>
+    /// <param name="propertyValue">The relation property value.</param>
+    /// <returns>A tuple containing user and object tuple strings.</returns>
+    private static (string userTupleStr, string objTupleStr) ExtractTupleStrings(
+        OpenFgaRelationAttribute attr,
+        object? entityIdValue,
+        object? propertyValue
+    ) {
+        // Retrieve foreign key object's ID value
+        var propertyOpenFgaTupleString = (string) propertyValue!
+                                                 .GetType()
+                                                 .GetMethod(nameof(IOpenFgaTypeId<>.AsOpenFgaIdTupleString))!
+                                                 .Invoke(propertyValue, null)!;
+
+        // Retrieve this entity's OpenFGA ID
+        var entityOpenFgaTupleString = (string) entityIdValue!
+                                               .GetType()
+                                               .GetMethod(nameof(IOpenFgaTypeId<>.AsOpenFgaIdTupleString))!
+                                               .Invoke(entityIdValue, null)!;
+
+        // Switch obj <-> user based on the relation's target type
+        return attr.TargetType switch {
+            OpenFgaRelationTargetType.Object => (propertyOpenFgaTupleString, entityOpenFgaTupleString),
+            OpenFgaRelationTargetType.User => (entityOpenFgaTupleString, propertyOpenFgaTupleString),
+        };
     }
 }
