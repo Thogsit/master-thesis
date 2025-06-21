@@ -22,6 +22,9 @@ max_line_length = 150
 [*.cs]
 indent_size = 4
 
+# Disable useless "switch does not have an arm for enums that have been idiotically created with `(SomeEnum) 42` that does not exist.
+dotnet_diagnostic.CS8524.severity = none
+
 # TEMPORARY UNTIL RELEASING THIS PROJECT; disable Roslyn related warnings that just annoy while debugging
 dotnet_diagnostic.RS2008.severity = none
 dotnet_diagnostic.RS1026.severity = none
