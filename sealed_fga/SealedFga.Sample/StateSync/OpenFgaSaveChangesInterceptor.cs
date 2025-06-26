@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -6,9 +7,10 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using OpenFga.Sdk.Client.Model;
 using SealedFga.Attributes;
-using SealedFga.Database;
+using SealedFga.Sample.Fga;
 
 namespace SealedFga.Sample.StateSync;
 
@@ -16,14 +18,16 @@ namespace SealedFga.Sample.StateSync;
 ///     Interceptor for DB save actions.
 ///     For every changed OpenFGA entity, makes sure the changed relations are sent to the OpenFGA service.
 /// </summary>
-public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
+public class OpenFgaSaveChangesInterceptor(IServiceProvider serviceProvider) : SaveChangesInterceptor {
+    private static readonly ThreadLocal<bool> IsProcessing = new();
+
     /// <inheritdoc />
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
         CancellationToken cancellationToken = new()
     ) {
-        ProcessOpenFgaChanges(eventData.Context);
+        RecursionSafeProcessOpenFgaChanges(eventData.Context);
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
@@ -32,8 +36,27 @@ public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
         DbContextEventData eventData,
         InterceptionResult<int> result
     ) {
-        ProcessOpenFgaChanges(eventData.Context);
+        RecursionSafeProcessOpenFgaChanges(eventData.Context);
         return base.SavingChanges(eventData, result);
+    }
+
+    /// <summary>
+    ///     Wrapper around the <see cref="ProcessOpenFgaChanges(DbContext?)" /> method
+    ///     that ensures that it is not called recursively.
+    ///     This can e.g. happen due to the TickerQ usage for OpenFGA change tracking.
+    /// </summary>
+    /// <param name="context"></param>
+    private void RecursionSafeProcessOpenFgaChanges(DbContext? context) {
+        if (IsProcessing.Value) {
+            return;
+        }
+
+        try {
+            IsProcessing.Value = true;
+            ProcessOpenFgaChanges(context);
+        } finally {
+            IsProcessing.Value = false;
+        }
     }
 
     /// <summary>
@@ -66,23 +89,28 @@ public class OpenFgaSaveChangesInterceptor : SaveChangesInterceptor {
             ProcessSingleEntityEntry(entry, ref writeRelations, ref deleteRelations);
         }
 
-        // Save the relations to the SealedFGA database
-        SealedFgaDb.Instance.AddFgaOperations([
-            ..writeRelations.Select(wr => new FgaOperation(
-                    FgaOperationType.Write,
-                    wr.User,
-                    wr.Relation,
-                    wr.Object
-                )
-            ),
-            ..deleteRelations.Select(dr => new FgaOperation(
-                    FgaOperationType.Delete,
+        if (deleteRelations.Count <= 0 && writeRelations.Count <= 0) {
+            return;
+        }
+
+        // Queue the relations to be written/deleted in OpenFGA
+        var sealedFgaService = serviceProvider.GetRequiredService<SealedFgaService>();
+        _ = sealedFgaService.QueueDeletes(
+            deleteRelations.Select(dr => (
                     dr.User,
                     dr.Relation,
                     dr.Object
                 )
-            ),
-        ]);
+            )
+        );
+        _ = sealedFgaService.QueueWrites(
+            writeRelations.Select(wr => (
+                    wr.User,
+                    wr.Relation,
+                    wr.Object
+                )
+            )
+        );
     }
 
     /// <summary>

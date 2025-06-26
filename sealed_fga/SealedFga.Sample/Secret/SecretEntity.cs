@@ -8,11 +8,11 @@ namespace SealedFga.Sample.Secret;
 public partial class SecretEntityId;
 
 public class SecretEntity : IOpenFgaType<SecretEntityId> {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public SecretEntityId Id { get; set; } = null!;
-
     [OpenFgaRelation(nameof(SecretEntityIdGroups.OwnedBy))]
     public AgencyEntityId OwningAgencyId { get; set; } = null!;
 
     public required string Value { get; set; }
+
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public SecretEntityId Id { get; set; } = null!;
 }

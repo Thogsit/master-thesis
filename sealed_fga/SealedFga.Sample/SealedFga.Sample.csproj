@@ -35,6 +35,25 @@
     <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.6" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_Data_Sqlite)\lib\netstandard2.0\*.dll" />
+
+    <PackageReference Include="TickerQ" Version="2.2.2-preview" />
+    <PackageReference Include="TickerQ.EntityFrameworkCore" Version="2.2.2-preview" />
+    <!-- Can be used if TickerQ needs some changes; currently 2.2.2-preview contains our fix already though
+    <Reference Include="TickerQ">
+      <HintPath>..\..\..\TickerQ\src\TickerQ\bin\Release\netstandard2.1\TickerQ.dll</HintPath>
+    </Reference>
+    <Reference Include="TickerQ.EntityFrameworkCore">
+      <HintPath>..\..\..\TickerQ\src\TickerQ.EntityFrameworkCore\bin\Release\netstandard2.1\TickerQ.EntityFrameworkCore.dll</HintPath>
+    </Reference>
+    <Reference Include="TickerQ.Utilities">
+      <HintPath>..\..\..\TickerQ\src\TickerQ.Utilities\bin\Release\netstandard2.1\TickerQ.Utilities.dll</HintPath>
+    </Reference>
+    <ProjectReference Include="..\..\..\TickerQ\src\TickerQ.SourceGenerator\TickerQ.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    -->
+    <PackageReference Include="TickerQ.Dashboard" Version="2.2.2-preview" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgMicrosoft_EntityFrameworkCore_Relational)\lib\netstandard2.0\*.dll" />
+
     <!-- The patched DLL seems to lead to runtime problems.
     Instead we use the original one as seen above and disable runtime permission checks by mimicking the IgnoresAccessChecksToAttribute
     <Analyzer Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" />-->

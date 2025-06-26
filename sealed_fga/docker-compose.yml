@@ -3,8 +3,6 @@ services:
     image: postgres:14
     container_name: sfga-postgres
     command: postgres -c 'max_connections=100'
-    networks:
-      - default
     ports:
       - "5432:5432"
     environment:
@@ -16,22 +14,35 @@ services:
       timeout: 5s
       retries: 5
 
-  migrate:
+  openfga-init: # creates an OpenFGA model
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
+    build:
+      dockerfile: openfga-init.DOCKERFILE
+      context: .
+    container_name: sfga-openfga-init
+    network_mode: host
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/openfga?sslmode=disable
+    volumes:
+      - ./SealedFga.Sample/model.fga:/model.fga:z
+
+  openfga-migrate:
     depends_on:
       postgres:
         condition: service_healthy
     image: openfga/openfga:latest
-    container_name: sfga-migrate
+    container_name: sfga-openfga-migrate
     environment:
       - OPENFGA_DATASTORE_ENGINE=postgres
       - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/postgres?sslmode=disable
     command: migrate
-    networks:
-      - default
 
   openfga:
     depends_on:
-      migrate:
+      openfga-migrate:
         condition: service_completed_successfully
     image: openfga/openfga:latest
     container_name: sfga-openfga
@@ -41,8 +52,6 @@ services:
       - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/postgres?sslmode=disable
       - OPENFGA_DATASTORE_MAX_OPEN_CONNS=100 #see postgres container
       - OPENFGA_PLAYGROUND_ENABLED=true
-    networks:
-      - default
     ports:
       - "8080:8080" #http
       - "8081:8081" #grpc
@@ -58,4 +67,3 @@ services:
       interval: 5s
       timeout: 30s
       retries: 3
-

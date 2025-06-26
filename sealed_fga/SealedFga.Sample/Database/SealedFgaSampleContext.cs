@@ -2,13 +2,10 @@
 
 using Microsoft.EntityFrameworkCore;
 using SealedFga.Sample.Secret;
-using SealedFga.Sample.StateSync;
 
 namespace SealedFga.Sample.Database;
 
 public class SealedFgaSampleContext(DbContextOptions<SealedFgaSampleContext> options) : DbContext(options) {
-    private static readonly OpenFgaSaveChangesInterceptor OpenFgaSaveChangesInterceptor = new();
-
     public DbSet<AgencyEntity> AgencyEntities { get; set; }
 
     public DbSet<SecretEntity> SecretEntities { get; set; }
@@ -41,9 +38,6 @@ public class SealedFgaSampleContext(DbContextOptions<SealedFgaSampleContext> opt
             }
         );
     }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.AddInterceptors(OpenFgaSaveChangesInterceptor);
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) {
         base.ConfigureConventions(configurationBuilder);
