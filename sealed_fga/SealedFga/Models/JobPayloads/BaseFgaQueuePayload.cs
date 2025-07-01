@@ -1,4 +1,4 @@
-namespace SealedFga.Sample.Fga.Payloads;
+namespace SealedFga.Models.JobPayloads;
 
 public abstract record BaseFgaQueuePayload {
     public required string RawUser { get; init; }

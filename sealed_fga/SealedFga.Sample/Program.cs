@@ -2,11 +2,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpenFga.Sdk.Client;
-using SealedFga.ModelBinding;
+using SealedFga.Fga;
+using SealedFga.ModelBinder;
 using SealedFga.Sample.Database;
-using SealedFga.Sample.Fga;
 using SealedFga.Sample.Secret;
-using SealedFga.Sample.StateSync;
 using TickerQ.Dashboard.DependencyInjection;
 using TickerQ.DependencyInjection;
 using TickerQ.EntityFrameworkCore.DependencyInjection;
@@ -15,13 +14,15 @@ namespace SealedFga.Sample;
 
 public static class Program {
     public static void Main(string[] args) {
+        SealedFgaInit.Initialize();
+
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container
         builder.Services.AddDbContext<SealedFgaSampleContext>((sp, options) => {
                 options.UseInMemoryDatabase("SealedFgaSampleDb");
                 options.AddInterceptors(
-                    sp.GetRequiredService<OpenFgaSaveChangesInterceptor>()
+                    sp.GetRequiredService<SealedFgaSaveChangesInterceptor>()
                 );
             }
         );
@@ -38,7 +39,7 @@ public static class Program {
                         ApiUrl = "http://localhost:8080",
                     }
                 );
-                var storeId = fgaClient.ListStores().Result.Stores[0].Id;
+                var storeId = fgaClient.ListStores(null).Result.Stores[0].Id;
                 fgaClient.Dispose();
                 fgaClient = new OpenFgaClient(
                     new ClientConfiguration {
@@ -58,7 +59,7 @@ public static class Program {
             }
         );
         builder.Services.AddScoped<SealedFgaService>();
-        builder.Services.AddScoped<OpenFgaSaveChangesInterceptor>();
+        builder.Services.AddScoped<SealedFgaSaveChangesInterceptor>();
         builder.Services.AddTickerQ(opt => {
                 opt.AddOperationalStore<SealedFgaSampleContext>(efOpt => {
                         efOpt.UseModelCustomizerForMigrations();
@@ -79,8 +80,6 @@ public static class Program {
             var context = scope.ServiceProvider.GetRequiredService<SealedFgaSampleContext>();
             context.Database.EnsureCreated();
         }
-
-        //TickerQInstanceFactory.Initialize();
 
         app.Run();
     }

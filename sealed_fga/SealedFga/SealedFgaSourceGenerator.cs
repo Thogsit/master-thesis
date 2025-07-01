@@ -10,7 +10,7 @@ using OpenFga.Language.Model;
 using SealedFga.Attributes;
 using SealedFga.Generators;
 using SealedFga.Generators.AuthModel;
-using SealedFga.Generators.ModelBinder;
+using SealedFga.Generators.Fga;
 using SealedFga.Models;
 
 namespace SealedFga;
@@ -87,18 +87,8 @@ public class SealedFgaSourceGenerator : IIncrementalGenerator {
 
     private static void GenerateNonIncrementalSourceFiles(IncrementalGeneratorPostInitializationContext context) {
         var generatedFiles = new List<GeneratedFile>([
-                OpenFgaTypeIdWithoutAssociatedIdTypeInterfaceGenerator.Generate(),
-                OpenFgaTypeIdInterfaceGenerator.Generate(),
-                OpenFgaTypeInterfaceGenerator.Generate(),
-                OpenFgaRelationInterfacesGenerator.Generate(),
-                GuidIdTypeConverterGenerator.Generate(),
                 SealedFgaExtensionsGenerator.Generate(),
-                FgaAuthorizeAttributeGenerator.Generate(),
-                FgaAuthorizeListAttributeGenerator.Generate(),
-                SealedFgaEntityListModelBinderGenerator.Generate(),
-                SealedFgaEntityModelBinderGenerator.Generate(),
-                SealedFgaModelBinderGenerator.Generate(),
-                SealedFgaModelBinderProviderGenerator.Generate(),
+                SealedFgaSaveChangesInterceptorGenerator.Generate(),
             ]
         );
 
@@ -130,6 +120,9 @@ public class SealedFgaSourceGenerator : IIncrementalGenerator {
                 idClassToGenerate
             );
         }
+
+        var generatedSealedFgaFile = SealedFgaInitGenerator.Generate(fgaRelatedChanges.idClasses);
+        context.AddSource(generatedSealedFgaFile.FileName, generatedSealedFgaFile.BuildFullFileContent());
     }
 
     private static void AddGeneratedFilesForFgaType(

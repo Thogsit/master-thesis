@@ -20,14 +20,14 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer {
 
         context.RegisterCompilationStartAction(compilationStartContext => {
                 // Find the "ImplementedBy" attribute symbol to be used for dependency injection on control flow analysis
-                var implementedByAttributeSymbol =
-                    compilationStartContext.Compilation.GetTypeByMetadataName(typeof(ImplementedByAttribute).FullName!
-                    )!;
+                var implementedByAttributeSymbol = compilationStartContext.Compilation.GetTypeByMetadataName(
+                    typeof(ImplementedByAttribute).FullName!
+                )!;
                 var fgaAuthorizeAttributeSymbol = compilationStartContext.Compilation.GetTypeByMetadataName(
-                    Settings.ModelBindingNamespace + ".FgaAuthorizeAttribute"
+                    typeof(FgaAuthorizeAttribute).FullName!
                 )!;
                 var fgaAuthorizeListAttributeSymbol = compilationStartContext.Compilation.GetTypeByMetadataName(
-                    Settings.ModelBindingNamespace + ".FgaAuthorizeListAttribute"
+                    typeof(FgaAuthorizeListAttribute).FullName!
                 )!;
                 var httpEndpointAttributes =
                     Settings.HttpEndpointAttributeFullNames.Select(name =>

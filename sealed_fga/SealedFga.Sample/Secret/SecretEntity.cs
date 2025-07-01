@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using SealedFga.Attributes;
+using SealedFga.AuthModel;
 using SealedFga.Models;
 
 namespace SealedFga.Sample.Secret;

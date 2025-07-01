@@ -19,7 +19,7 @@ public static class TypeNameRelationsGenerator {
           ///     Represents a set of strongly-typed OpenFGA relations for the {{className}} entity.
           /// </summary>
           public class {{className}}(string val)
-          : OpenFgaRelation(val), IOpenFgaRelationWithImplementingType<{{idClassName}}, {{className}}>
+          : OpenFgaRelation(val), IOpenFgaRelation<{{idClassName}}>
           {
               {{GetEnumFields(className, relNames)}}
 
@@ -33,6 +33,7 @@ public static class TypeNameRelationsGenerator {
           """,
         new HashSet<string>([
                 Settings.PackageNamespace,
+                Settings.AuthModelNamespace,
             ]
         ),
         classNamespace

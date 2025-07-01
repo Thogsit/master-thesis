@@ -2,68 +2,26 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OpenFga.Sdk.Client.Model;
 using SealedFga.Attributes;
-using SealedFga.Sample.Fga;
+using SealedFga.AuthModel;
 
-namespace SealedFga.Sample.StateSync;
+namespace SealedFga.Fga;
 
 /// <summary>
-///     Interceptor for DB save actions.
-///     For every changed OpenFGA entity, makes sure the changed relations are sent to the OpenFGA service.
+///     Due to the restriction to netstandard 2.0, this class is used to decouple the logic from the
+///     SealedFgaSaveChangesInterceptor class.
+///     The SealedFgaSaveChangesInterceptor.partial.g.cs file contains the inheritance and uses the below methods.
 /// </summary>
-public class OpenFgaSaveChangesInterceptor(IServiceProvider serviceProvider) : SaveChangesInterceptor {
-    private static readonly ThreadLocal<bool> IsProcessing = new();
-
-    /// <inheritdoc />
-    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
-        DbContextEventData eventData,
-        InterceptionResult<int> result,
-        CancellationToken cancellationToken = new()
-    ) {
-        RecursionSafeProcessOpenFgaChanges(eventData.Context);
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public override InterceptionResult<int> SavingChanges(
-        DbContextEventData eventData,
-        InterceptionResult<int> result
-    ) {
-        RecursionSafeProcessOpenFgaChanges(eventData.Context);
-        return base.SavingChanges(eventData, result);
-    }
-
-    /// <summary>
-    ///     Wrapper around the <see cref="ProcessOpenFgaChanges(DbContext?)" /> method
-    ///     that ensures that it is not called recursively.
-    ///     This can e.g. happen due to the TickerQ usage for OpenFGA change tracking.
-    /// </summary>
-    /// <param name="context"></param>
-    private void RecursionSafeProcessOpenFgaChanges(DbContext? context) {
-        if (IsProcessing.Value) {
-            return;
-        }
-
-        try {
-            IsProcessing.Value = true;
-            ProcessOpenFgaChanges(context);
-        } finally {
-            IsProcessing.Value = false;
-        }
-    }
-
+public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
     /// <summary>
     ///     Main method that processes OpenFGA changes for a given DbContext.
     /// </summary>
     /// <param name="context">The DbContext to process changes for.</param>
-    private void ProcessOpenFgaChanges(DbContext? context) {
+    public void ProcessOpenFgaChanges(DbContext? context) {
         if (context is null) {
             return;
         }

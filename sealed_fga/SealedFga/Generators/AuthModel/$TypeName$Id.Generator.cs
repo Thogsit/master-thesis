@@ -5,6 +5,8 @@ using SealedFga.Models;
 namespace SealedFga.Generators.AuthModel;
 
 public static class TypeNameIdGenerator {
+    public const string ParseMethodName = "Parse";
+
     public static GeneratedFile Generate(IdClassToGenerateData idClassToGenerate)
         => new(
             $"{idClassToGenerate.ClassName}.partial.g.cs",
@@ -40,7 +42,7 @@ public static class TypeNameIdGenerator {
                   }
 
                   /// <inheritdoc />
-                  public static {{idClassToGenerate.ClassName}} Parse(string val)
+                  public static {{idClassToGenerate.ClassName}} {{ParseMethodName}}(string val)
                   {
                       return new {{idClassToGenerate.ClassName}}({{GetParserFunction(idClassToGenerate, "val")}});
                   }
@@ -115,7 +117,8 @@ public static class TypeNameIdGenerator {
             new HashSet<string>([
                     ..GetTypeDependentUsings(idClassToGenerate),
                     "Microsoft.EntityFrameworkCore.Storage.ValueConversion",
-                    "SealedFga.Util",
+                    Settings.AuthModelNamespace,
+                    Settings.UtilNamespace,
                     "System.ComponentModel",
                     "System.Text.Json.Serialization",
                 ]

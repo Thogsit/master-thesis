@@ -5,13 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using OpenFga.Sdk.Client;
 using OpenFga.Sdk.Client.Model;
-using SealedFga.Sample.Fga.Payloads;
+using SealedFga.AuthModel;
+using SealedFga.Models.JobPayloads;
+using SealedFga.Util;
 using TickerQ.Utilities;
 using TickerQ.Utilities.Interfaces.Managers;
 using TickerQ.Utilities.Models.Ticker;
 using Tuple = OpenFga.Sdk.Model.Tuple;
 
-namespace SealedFga.Sample.Fga;
+namespace SealedFga.Fga;
 
 /// <summary>
 ///     Wrapper class for communicating with the OpenFGA service using strongly typed IDs.
@@ -21,27 +23,26 @@ public class SealedFgaService(
     OpenFgaClient openFgaClient,
     ITimeTickerManager<TimeTicker> tickerQ
 ) {
-    public const int DefaultRetryCount = 5;
-
-    public static readonly int[] DefaultRetryIntervals = [
-        TimeSpan.FromSeconds(0).Seconds,
+    private static readonly int[] DefaultRetryIntervals = [
         TimeSpan.FromMinutes(1).Seconds,
+        TimeSpan.FromMinutes(10).Seconds,
         TimeSpan.FromHours(1).Seconds,
-        TimeSpan.FromHours(6).Seconds,
-        TimeSpan.FromDays(1).Seconds,
     ];
+
+    private static readonly int DefaultRetryCount = DefaultRetryIntervals.Length;
 
     private TimeTicker CreateTimeTicker<TReq>(
         string functionName,
         TReq request,
-        int retries = DefaultRetryCount,
+        int? retries = null,
         int[]? retryIntervals = null
     ) {
+        retries ??= DefaultRetryCount;
         retryIntervals ??= DefaultRetryIntervals;
         return new TimeTicker {
             Function = functionName,
             Request = TickerHelper.CreateTickerRequest(request),
-            Retries = retries,
+            Retries = retries.Value,
             ExecutionTime = DateTime.Now.AddSeconds(1),
             RetryIntervals = retryIntervals,
         };
@@ -175,11 +176,11 @@ public class SealedFgaService(
         var objectStrings = await ListObjectsAsync(
             user.AsOpenFgaIdTupleString(),
             relation.AsOpenFgaString(),
-            TObjId.OpenFgaTypeName,
+            IdUtil.GetNameByIdType(typeof(TObjId)),
             cancellationToken
         );
 
-        return objectStrings.Select(TObjId.Parse);
+        return objectStrings.Select(IdUtil.ParseId<TObjId>);
     }
 
     /// <summary>

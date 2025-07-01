@@ -1,3 +1,3 @@
-namespace SealedFga.Sample.Fga.Payloads;
+namespace SealedFga.Models.JobPayloads;
 
 public record FgaQueueWritePayload : BaseFgaQueuePayload;

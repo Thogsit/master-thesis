@@ -2,11 +2,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SealedFga.Sample.Fga.Payloads;
+using SealedFga.Models.JobPayloads;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Models;
 
-namespace SealedFga.Sample.Fga;
+namespace SealedFga.Fga;
 
 /// <summary>
 ///     A service class that handles jobs related to OpenFGA operations, such as writing and
