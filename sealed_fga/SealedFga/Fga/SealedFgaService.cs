@@ -51,6 +51,32 @@ public class SealedFgaService(
     #region Strongly-Typed ID Methods
 
     /// <summary>
+    ///     Ensures authorization using strongly typed IDs, throwing an exception if the check fails.
+    /// </summary>
+    /// <param name="user">The user ID (strongly typed)</param>
+    /// <param name="relation">The relation string</param>
+    /// <param name="objectId">The object ID (strongly typed)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <typeparam name="TUserId">The user ID type</typeparam>
+    /// <typeparam name="TObjId">The object ID type</typeparam>
+    /// <exception cref="UnauthorizedAccessException">Thrown when the authorization check fails</exception>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public async Task EnsureCheckAsync<TUserId, TObjId>(
+        TUserId user,
+        IOpenFgaRelation<TObjId> relation,
+        TObjId objectId,
+        CancellationToken cancellationToken = new()
+    )
+        where TUserId : IOpenFgaTypeId<TUserId>
+        where TObjId : IOpenFgaTypeId<TObjId> {
+        if (await CheckAsync(user, relation, objectId, cancellationToken)) {
+            throw new UnauthorizedAccessException(
+                $"Access denied: User '{user}' does not have relation '{relation}' to object '{objectId}'"
+            );
+        }
+    }
+
+    /// <summary>
     ///     Checks authorization using strongly typed IDs.
     /// </summary>
     /// <param name="user">The user ID (strongly typed)</param>
