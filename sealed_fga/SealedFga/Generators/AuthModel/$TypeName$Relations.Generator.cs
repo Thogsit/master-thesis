@@ -16,10 +16,10 @@ public static class TypeNameRelationsGenerator {
         $"{className}.g.cs",
         $$"""
           /// <summary>
-          ///     Represents a set of strongly-typed OpenFGA relations for the {{className}} entity.
+          ///     Represents a set of strongly-typed SealedFGA relations for the {{className}} entity.
           /// </summary>
           public class {{className}}(string val)
-          : OpenFgaRelation(val), IOpenFgaRelation<{{idClassName}}>
+          : SealedFgaRelation(val), ISealedFgaRelation<{{idClassName}}>
           {
               {{GetEnumFields(className, relNames)}}
 

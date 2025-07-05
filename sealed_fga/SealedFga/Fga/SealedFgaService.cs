@@ -63,12 +63,12 @@ public class SealedFgaService(
     /// <returns>A task that represents the asynchronous operation</returns>
     public async Task EnsureCheckAsync<TUserId, TObjId>(
         TUserId user,
-        IOpenFgaRelation<TObjId> relation,
+        ISealedFgaRelation<TObjId> relation,
         TObjId objectId,
         CancellationToken cancellationToken = new()
     )
-        where TUserId : IOpenFgaTypeId<TUserId>
-        where TObjId : IOpenFgaTypeId<TObjId> {
+        where TUserId : ISealedFgaTypeId<TUserId>
+        where TObjId : ISealedFgaTypeId<TObjId> {
         if (await CheckAsync(user, relation, objectId, cancellationToken)) {
             throw new UnauthorizedAccessException(
                 $"Access denied: User '{user}' does not have relation '{relation}' to object '{objectId}'"
@@ -88,12 +88,12 @@ public class SealedFgaService(
     /// <returns>True if the relation exists, false otherwise</returns>
     public async Task<bool> CheckAsync<TUserId, TObjId>(
         TUserId user,
-        IOpenFgaRelation<TObjId> relation,
+        ISealedFgaRelation<TObjId> relation,
         TObjId objectId,
         CancellationToken cancellationToken = new()
     )
-        where TUserId : IOpenFgaTypeId<TUserId>
-        where TObjId : IOpenFgaTypeId<TObjId>
+        where TUserId : ISealedFgaTypeId<TUserId>
+        where TObjId : ISealedFgaTypeId<TObjId>
         => await CheckAsync(
             user.AsOpenFgaIdTupleString(),
             relation.AsOpenFgaString(),
@@ -111,11 +111,11 @@ public class SealedFgaService(
     /// <typeparam name="TObjId">The object ID type</typeparam>
     public async Task QueueWrite<TUserId, TObjId>(
         TUserId user,
-        IOpenFgaRelation<TObjId> relation,
+        ISealedFgaRelation<TObjId> relation,
         TObjId objectId
     )
-        where TUserId : IOpenFgaTypeId<TUserId>
-        where TObjId : IOpenFgaTypeId<TObjId>
+        where TUserId : ISealedFgaTypeId<TUserId>
+        where TObjId : ISealedFgaTypeId<TObjId>
         => await QueueWrite(
             user.AsOpenFgaIdTupleString(),
             relation.AsOpenFgaString(),
@@ -132,11 +132,11 @@ public class SealedFgaService(
     /// <typeparam name="TObjId">The object ID type</typeparam>
     public async Task QueueDelete<TUserId, TObjId>(
         TUserId user,
-        IOpenFgaRelation<TObjId> relation,
+        ISealedFgaRelation<TObjId> relation,
         TObjId objectId
     )
-        where TUserId : IOpenFgaTypeId<TUserId>
-        where TObjId : IOpenFgaTypeId<TObjId>
+        where TUserId : ISealedFgaTypeId<TUserId>
+        where TObjId : ISealedFgaTypeId<TObjId>
         => await QueueDelete(
             user.AsOpenFgaIdTupleString(),
             relation.AsOpenFgaString(),
@@ -150,10 +150,10 @@ public class SealedFgaService(
     /// <typeparam name="TUserId">The user ID type</typeparam>
     /// <typeparam name="TObjId">The object ID type</typeparam>
     public async Task QueueWrites<TUserId, TObjId>(
-        IEnumerable<(TUserId User, IOpenFgaRelation<TObjId> Relation, TObjId Object)> operations
+        IEnumerable<(TUserId User, ISealedFgaRelation<TObjId> Relation, TObjId Object)> operations
     )
-        where TUserId : IOpenFgaTypeId<TUserId>
-        where TObjId : IOpenFgaTypeId<TObjId>
+        where TUserId : ISealedFgaTypeId<TUserId>
+        where TObjId : ISealedFgaTypeId<TObjId>
         => await QueueWrites(
             operations.Select(op => (
                     op.User.AsOpenFgaIdTupleString(),
@@ -170,10 +170,10 @@ public class SealedFgaService(
     /// <typeparam name="TUserId">The user ID type</typeparam>
     /// <typeparam name="TObjId">The object ID type</typeparam>
     public async Task QueueDeletes<TUserId, TObjId>(
-        IEnumerable<(TUserId User, IOpenFgaRelation<TObjId> Relation, TObjId Object)> operations
+        IEnumerable<(TUserId User, ISealedFgaRelation<TObjId> Relation, TObjId Object)> operations
     )
-        where TUserId : IOpenFgaTypeId<TUserId>
-        where TObjId : IOpenFgaTypeId<TObjId>
+        where TUserId : ISealedFgaTypeId<TUserId>
+        where TObjId : ISealedFgaTypeId<TObjId>
         => await QueueDeletes(
             operations.Select(op => (
                     op.User.AsOpenFgaIdTupleString(),
@@ -194,11 +194,11 @@ public class SealedFgaService(
     /// <returns>List of strongly typed object IDs</returns>
     public async Task<IEnumerable<TObjId>> ListObjectsAsync<TUserId, TObjId>(
         TUserId user,
-        IOpenFgaRelation<TObjId> relation,
+        ISealedFgaRelation<TObjId> relation,
         CancellationToken cancellationToken = new()
     )
-        where TUserId : IOpenFgaTypeId<TUserId>
-        where TObjId : IOpenFgaTypeId<TObjId> {
+        where TUserId : ISealedFgaTypeId<TUserId>
+        where TObjId : ISealedFgaTypeId<TObjId> {
         var objectStrings = await ListObjectsAsync(
             user.AsOpenFgaIdTupleString(),
             relation.AsOpenFgaString(),
@@ -217,13 +217,13 @@ public class SealedFgaService(
     /// <typeparam name="TUserId">The user ID type</typeparam>
     /// <typeparam name="TObjId">The object ID type</typeparam>
     /// <returns>Dictionary with results for each check</returns>
-    public async Task<Dictionary<(TUserId User, IOpenFgaRelation<TObjId> Relation, TObjId Object), bool>>
+    public async Task<Dictionary<(TUserId User, ISealedFgaRelation<TObjId> Relation, TObjId Object), bool>>
         BatchCheckAsync<TUserId, TObjId>(
-            IEnumerable<(TUserId User, IOpenFgaRelation<TObjId> Relation, TObjId Object)> checks,
+            IEnumerable<(TUserId User, ISealedFgaRelation<TObjId> Relation, TObjId Object)> checks,
             CancellationToken cancellationToken = new()
         )
-        where TUserId : IOpenFgaTypeId<TUserId>
-        where TObjId : IOpenFgaTypeId<TObjId> {
+        where TUserId : ISealedFgaTypeId<TUserId>
+        where TObjId : ISealedFgaTypeId<TObjId> {
         var checksAsList = checks.ToList();
         var results = await BatchCheckAsync(
             checksAsList.Select(check => (
@@ -303,7 +303,7 @@ public class SealedFgaService(
     internal async Task QueueWrite(string rawUser, string rawRelation, string rawObject)
         => await tickerQ.AddAsync(
             CreateTimeTicker(
-                FgaQueueHandlerService.FgaWriteJobName,
+                SealedFgaQueue.FgaWriteJobName,
                 new FgaQueueWritePayload {
                     RawUser = rawUser,
                     RawRelation = rawRelation,
@@ -321,7 +321,7 @@ public class SealedFgaService(
     internal async Task QueueDelete(string user, string relation, string objectId)
         => await tickerQ.AddAsync(
             CreateTimeTicker(
-                FgaQueueHandlerService.FgaDeleteJobName,
+                SealedFgaQueue.FgaDeleteJobName,
                 new FgaQueueDeletePayload {
                     RawUser = user,
                     RawRelation = relation,
@@ -337,7 +337,7 @@ public class SealedFgaService(
     internal async Task QueueWrites(IEnumerable<(string User, string Relation, string Object)> tuples)
         => await tickerQ.AddAsync(
             CreateTimeTicker(
-                FgaQueueHandlerService.FgaWriteMultipleJobName,
+                SealedFgaQueue.FgaWriteMultipleJobName,
                 tuples.Select(t => new FgaQueueWritePayload {
                         RawUser = t.User,
                         RawRelation = t.Relation,
@@ -354,7 +354,7 @@ public class SealedFgaService(
     internal async Task QueueDeletes(IEnumerable<(string User, string Relation, string Object)> tuples)
         => await tickerQ.AddAsync(
             CreateTimeTicker(
-                FgaQueueHandlerService.FgaDeleteMultipleJobName,
+                SealedFgaQueue.FgaDeleteMultipleJobName,
                 tuples.Select(t => new FgaQueueDeletePayload {
                         RawUser = t.User,
                         RawRelation = t.Relation,
@@ -426,11 +426,9 @@ public class SealedFgaService(
     ///     A task that represents the asynchronous operation. Returns a list of booleans indicating which tuples were
     ///     written (true) or already existed (false).
     /// </returns>
-    public async Task<List<bool>> SafeWriteTupleAsync(
-        List<FgaQueueWritePayload> tuples,
-        CancellationToken ct = new()
-    ) {
-        return await SafeTupleOperationAsync(
+    public async Task SafeWriteTupleAsync(List<FgaQueueWritePayload> tuples,
+        CancellationToken ct = new()) {
+        await SafeTupleOperationAsync(
             tuples,
             tuple => (tuple.RawUser, tuple.RawRelation, tuple.RawObject),
             exists => !exists,

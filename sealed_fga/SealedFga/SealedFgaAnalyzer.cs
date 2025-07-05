@@ -10,8 +10,8 @@ namespace SealedFga;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class SealedFgaAnalyzer : DiagnosticAnalyzer {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = [
-        OpenFgaDiagnosticRules.FoundContextRule,
-        OpenFgaDiagnosticRules.PossiblyMisingImplementedByRule,
+        SealedFgaDiagnosticRules.FoundContextRule,
+        SealedFgaDiagnosticRules.PossiblyMisingImplementedByRule,
     ];
 
     public override void Initialize(AnalysisContext context) {
@@ -36,7 +36,7 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer {
                             .ToImmutableHashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
                 // Register the analysis sessions' handlers
-                var analysisSession = new OpenFgaAnalysisSession(
+                var analysisSession = new SealedFgaAnalysisSession(
                     implementedByAttributeSymbol,
                     fgaAuthorizeAttributeSymbol,
                     fgaAuthorizeListAttributeSymbol,

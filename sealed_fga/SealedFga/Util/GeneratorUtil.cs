@@ -6,10 +6,10 @@ namespace SealedFga.Util;
 
 public static class GeneratorUtil {
 #pragma warning disable CS8524
-    public static string GetCsharpTypeByOpenFgaIdType(OpenFgaTypeIdType type)
+    public static string GetCsharpTypeBySealedFgaIdType(SealedFgaTypeIdType type)
         => type switch {
-            OpenFgaTypeIdType.String => "string",
-            OpenFgaTypeIdType.Guid => "Guid",
+            SealedFgaTypeIdType.String => "string",
+            SealedFgaTypeIdType.Guid => "Guid",
         };
 #pragma warning restore CS8524
 

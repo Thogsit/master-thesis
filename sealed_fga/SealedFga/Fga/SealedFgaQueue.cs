@@ -9,11 +9,11 @@ using TickerQ.Utilities.Models;
 namespace SealedFga.Fga;
 
 /// <summary>
-///     A service class that handles jobs related to OpenFGA operations, such as writing and
+///     A service class that handles jobs related to FGA operations, such as writing and
 ///     deleting tuples in the OpenFGA store. This service is integrated with TickerQ functions
 ///     for task execution.
 /// </summary>
-public class FgaQueueHandlerService(SealedFgaService sealedFgaService) {
+public class SealedFgaQueue(SealedFgaService sealedFgaService) {
     public const string FgaWriteJobName = "FgaWriteJob";
     public const string FgaDeleteJobName = "FgaDeleteJob";
     public const string FgaWriteMultipleJobName = "FgaWriteMultipleJob";

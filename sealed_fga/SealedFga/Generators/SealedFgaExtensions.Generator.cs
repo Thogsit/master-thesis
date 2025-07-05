@@ -15,25 +15,25 @@ public static class SealedFgaExtensionsGenerator {
             public static class SealedFgaExtensions
             {
                 /// <summary>
-                ///    Retrieves all OpenFGA ID types from the assembly.
+                ///    Retrieves all SealedFGA ID types from the assembly.
                 /// </summary>
-                private static IEnumerable<Type> GetOpenFgaIdTypes()
+                private static IEnumerable<Type> GetSealedFgaIdTypes()
                 {
                     var assembly = Assembly.GetExecutingAssembly();
                     var idTypes = assembly.GetTypes()
-                                          .Where(t => t.GetCustomAttribute<OpenFgaTypeIdAttribute>() is not null);
+                                          .Where(t => t.GetCustomAttribute<SealedFgaTypeIdAttribute>() is not null);
 
                     return idTypes;
                 }
 
                 /// <summary>
-                ///     Configures the EF Core model builder to use the OpenFGA ID types.
+                ///     Configures the EF Core model builder to use the SealedFGA ID types.
                 ///     Has to be called from the DbContext's ConfigureConventions method.
                 /// </summary>
                 public static void ConfigureSealedFga(this ModelConfigurationBuilder configurationBuilder)
                 {
-                    // Retrieve all OpenFGA ID Types from the assembly
-                    var idTypes = GetOpenFgaIdTypes();
+                    // Retrieve all SealedFGA ID Types from the assembly
+                    var idTypes = GetSealedFgaIdTypes();
 
                     // Retrieve contained EF Core ValueConverter classes and register them
                     foreach (var type in idTypes) {

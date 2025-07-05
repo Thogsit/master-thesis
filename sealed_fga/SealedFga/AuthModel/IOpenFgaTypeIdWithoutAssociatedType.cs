@@ -1,10 +1,10 @@
 namespace SealedFga.AuthModel;
 
 /// <summary>
-///     Abstract base class for type IDs for OpenFGA object entities.
+///     Abstract base class for type IDs for SealedFGA object entities.
 ///     Has no associated ID type for easier usage in generic type parameters.
 /// </summary>
-public interface IOpenFgaTypeIdWithoutAssociatedIdType {
+public interface ISealedFgaTypeIdWithoutAssociatedIdType {
     /// <summary>
     ///     Returns the ID without its type in its OpenFGA string representation.
     /// </summary>

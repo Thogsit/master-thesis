@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 
 namespace SealedFga.Analysis;
 
-public static class OpenFgaDiagnosticRules {
+public static class SealedFgaDiagnosticRules {
     public static readonly DiagnosticDescriptor FoundContextRule = new(
         "SFGA003",
         "Found context",

@@ -4,7 +4,7 @@ namespace SealedFga.AuthModel;
 ///     Used to strongly type enums for representation of OpenFGA relations.
 /// </summary>
 /// <param name="val">The enum's value, i.e. the OpenFGA relation string, e.g. <c>"can_view"</c>.</param>
-public abstract class OpenFgaRelation(string val) {
+public abstract class SealedFgaRelation(string val) {
     /// <summary>
     ///     The raw relation name.
     /// </summary>
@@ -24,8 +24,8 @@ public abstract class OpenFgaRelation(string val) {
 ///     Used to strongly type enums for representation of OpenFGA relations.
 /// </summary>
 /// <typeparam name="TObjId">The related object entity ID's type.</typeparam>
-public interface IOpenFgaRelation<TObjId>
-    where TObjId : IOpenFgaTypeIdWithoutAssociatedIdType {
+public interface ISealedFgaRelation<TObjId>
+    where TObjId : ISealedFgaTypeIdWithoutAssociatedIdType {
     /// <summary>
     ///     The raw relation name.
     /// </summary>

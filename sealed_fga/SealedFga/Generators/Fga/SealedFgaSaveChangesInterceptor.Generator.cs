@@ -13,12 +13,12 @@ public static class SealedFgaSaveChangesInterceptorGenerator {
                 private static readonly ThreadLocal<bool> IsProcessing = new();
 
                 /// <summary>
-                ///     Wrapper around the <see cref="ProcessOpenFgaChanges(DbContext?)" /> method
+                ///     Wrapper around the <see cref="ProcessSealedFgaChanges(DbContext?)" /> method
                 ///     that ensures that it is not called recursively.
-                ///     This can e.g. happen due to the TickerQ usage for OpenFGA change tracking.
+                ///     This can e.g. happen due to the TickerQ usage for SealedFGA change tracking.
                 /// </summary>
                 /// <param name="context"></param>
-                private void RecursionSafeProcessOpenFgaChanges(DbContext? context) {
+                private void RecursionSafeProcessSealedFgaChanges(DbContext? context) {
                     if (IsProcessing.Value) {
                         return;
                     }
@@ -26,7 +26,7 @@ public static class SealedFgaSaveChangesInterceptorGenerator {
                     try {
                         IsProcessing.Value = true;
                         var processor = new SealedFgaSaveChangesProcessor(serviceProvider);
-                        processor.ProcessOpenFgaChanges(context);
+                        processor.ProcessSealedFgaChanges(context);
                     } finally {
                         IsProcessing.Value = false;
                     }
@@ -38,7 +38,7 @@ public static class SealedFgaSaveChangesInterceptorGenerator {
                     InterceptionResult<int> result,
                     CancellationToken cancellationToken = new()
                 ) {
-                    RecursionSafeProcessOpenFgaChanges(eventData.Context);
+                    RecursionSafeProcessSealedFgaChanges(eventData.Context);
                     return base.SavingChangesAsync(eventData, result, cancellationToken);
                 }
 
@@ -47,7 +47,7 @@ public static class SealedFgaSaveChangesInterceptorGenerator {
                     DbContextEventData eventData,
                     InterceptionResult<int> result
                 ) {
-                    RecursionSafeProcessOpenFgaChanges(eventData.Context);
+                    RecursionSafeProcessSealedFgaChanges(eventData.Context);
                     return base.SavingChanges(eventData, result);
                 }
             }

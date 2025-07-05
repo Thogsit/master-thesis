@@ -4,10 +4,10 @@ using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.GlobalFlowStateAnalysis;
 
 namespace SealedFga.Analysis;
 
-internal class OpenFgaDataFlowValue(
+internal class SealedFgaDataFlowValue(
     Dictionary<string, HashSet<string>> checkedPermissionsByEntityId,
     bool negated
-) : IAbstractAnalysisValue, IEquatable<OpenFgaDataFlowValue> {
+) : IAbstractAnalysisValue, IEquatable<SealedFgaDataFlowValue> {
     /// <summary>
     ///     Contains all so far checked permissions per entity ID
     /// </summary>
@@ -28,11 +28,11 @@ internal class OpenFgaDataFlowValue(
 
     public bool Negated { get; } = negated;
 
-    public IAbstractAnalysisValue GetNegatedValue() => new OpenFgaDataFlowValue(CheckedPermissionsByEntityId, !Negated);
+    public IAbstractAnalysisValue GetNegatedValue() => new SealedFgaDataFlowValue(CheckedPermissionsByEntityId, !Negated);
 
-    public bool Equals(IAbstractAnalysisValue other) => other is OpenFgaDataFlowValue otherValue && Equals(otherValue);
+    public bool Equals(IAbstractAnalysisValue other) => other is SealedFgaDataFlowValue otherValue && Equals(otherValue);
 
-    public bool Equals(OpenFgaDataFlowValue other) {
+    public bool Equals(SealedFgaDataFlowValue other) {
         var otherCheckedPermissionsByEntityId = other.CheckedPermissionsByEntityId;
 
         // Reference equals

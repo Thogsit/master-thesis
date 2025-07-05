@@ -62,7 +62,7 @@ public class SealedFgaSourceGenerator : IIncrementalGenerator {
 
         // Filters for classes with the OpenFgaTypeIdAttribute
         var fgaTypeIdProvider = context.SyntaxProvider.ForAttributeWithMetadataName(
-            typeof(OpenFgaTypeIdAttribute).FullName!,
+            typeof(SealedFgaTypeIdAttribute).FullName!,
             static (synNode, _) => synNode is ClassDeclarationSyntax,
             static (context, _) => {
                 var classDeclaration = (ClassDeclarationSyntax) context.TargetNode;

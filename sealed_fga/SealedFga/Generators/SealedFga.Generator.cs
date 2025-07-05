@@ -12,14 +12,14 @@ public static class SealedFgaInitGenerator {
             "SealedFgaInit.g.cs",
             $$"""
               /// <summary>
-              ///     SealedFga static class for initialization and registration of OpenFGA type IDs.
+              ///     SealedFga static class for initialization and registration of SealedFGA type IDs.
               /// </summary>
               public static class SealedFgaInit {
                   /// <summary>
-                  ///     Initializes the SealedFga library by registering all OpenFGA type IDs.
+                  ///     Initializes the SealedFga library by registering all SealedFGA type IDs.
                   /// </summary>
                   public static void Initialize() {
-                      // Register all OpenFGA type IDs.
+                      // Register all SealedFGA type IDs.
                       {{GetIdUtilInitializationBlock(idClasses)}}
                   }
               }

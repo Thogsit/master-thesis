@@ -5,13 +5,13 @@ using System.Globalization;
 namespace SealedFga.AuthModel;
 
 /// <summary>
-///     Converts between <see cref="Guid" /> and a strongly-typed ID for use with OpenFGA entities.
+///     Converts between <see cref="Guid" /> and a strongly-typed ID for use with SealedFGA entities.
 /// </summary>
 /// <typeparam name="TId">The strongly-typed ID type.</typeparam>
 /// <param name="constrFunc">A function to construct the ID from a <see cref="Guid" />.</param>
 /// <param name="parseFunc">A function to parse the ID from a <see cref="string" />.</param>
 public class GuidIdTypeConverter<TId>(Func<Guid, TId> constrFunc, Func<string, TId> parseFunc)
-    : TypeConverter where TId : class, IOpenFgaTypeId<TId> {
+    : TypeConverter where TId : class, ISealedFgaTypeId<TId> {
     /// <inheritdoc />
     public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
         => sourceType == typeof(string)

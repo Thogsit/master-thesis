@@ -5,10 +5,10 @@ using SealedFga.Models;
 
 namespace SealedFga.Sample.Secret;
 
-[OpenFgaTypeId("agency", OpenFgaTypeIdType.Guid)]
+[SealedFgaTypeId("agency", SealedFgaTypeIdType.Guid)]
 public partial class AgencyEntityId;
 
-public class AgencyEntity : IOpenFgaType<AgencyEntityId> {
+public class AgencyEntity : ISealedFgaType<AgencyEntityId> {
     public required string Name { get; set; }
 
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

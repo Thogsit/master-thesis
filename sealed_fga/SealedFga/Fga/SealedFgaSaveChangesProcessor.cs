@@ -18,10 +18,10 @@ namespace SealedFga.Fga;
 /// </summary>
 public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
     /// <summary>
-    ///     Main method that processes OpenFGA changes for a given DbContext.
+    ///     Main method that processes SealedFGA changes for a given DbContext.
     /// </summary>
     /// <param name="context">The DbContext to process changes for.</param>
-    public void ProcessOpenFgaChanges(DbContext? context) {
+    public void ProcessSealedFgaChanges(DbContext? context) {
         if (context is null) {
             return;
         }
@@ -36,11 +36,11 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
                                                  && e.Entity.GetType().GetInterfaces()
                                                      .Any(i =>
                                                           i.IsGenericType && i.GetGenericTypeDefinition() ==
-                                                          typeof(IOpenFgaType<>)
+                                                          typeof(ISealedFgaType<>)
                                                       )
                                       );
 
-        // Retrieve OpenFGA relations to write/delete
+        // Retrieve SealedFGA relations to write/delete
         var writeRelations = new List<ClientTupleKey>();
         var deleteRelations = new List<ClientTupleKeyWithoutCondition>();
         foreach (var entry in relevantEntries) {
@@ -83,12 +83,12 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
         ref List<ClientTupleKeyWithoutCondition> deleteRelations
     ) {
         var entityType = entry.Entity.GetType();
-        var entityIdProperty = entry.Property(nameof(IOpenFgaType<>.Id));
+        var entityIdProperty = entry.Property(nameof(ISealedFgaType<>.Id));
 
         foreach (var property in entityType
                                 .GetProperties()
-                                .Where(prop => prop.GetCustomAttribute<OpenFgaRelationAttribute>() != null)) {
-            var attr = property.GetCustomAttribute<OpenFgaRelationAttribute>()!;
+                                .Where(prop => prop.GetCustomAttribute<SealedFgaRelationAttribute>() != null)) {
+            var attr = property.GetCustomAttribute<SealedFgaRelationAttribute>()!;
             var entryProperty = entry.Property(property.Name);
 
             ProcessEntityPropertyRelation(
@@ -113,7 +113,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
     /// <param name="deleteRelations">List to populate with relations to delete.</param>
     private static void ProcessEntityPropertyRelation(
         EntityState entityState,
-        OpenFgaRelationAttribute relationAttribute,
+        SealedFgaRelationAttribute relationAttribute,
         PropertyEntry entityIdProperty,
         PropertyEntry relationProperty,
         ref List<ClientTupleKey> writeRelations,
@@ -151,7 +151,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
     ///     Processes relations for a newly added entity.
     /// </summary>
     private static void ProcessAddedEntity(
-        OpenFgaRelationAttribute attr,
+        SealedFgaRelationAttribute attr,
         PropertyEntry entityIdProperty,
         PropertyEntry relationProperty,
         ref List<ClientTupleKey> writeRelations
@@ -174,7 +174,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
     ///     Processes relations for a deleted entity.
     /// </summary>
     private static void ProcessDeletedEntity(
-        OpenFgaRelationAttribute attr,
+        SealedFgaRelationAttribute attr,
         PropertyEntry entityIdProperty,
         PropertyEntry relationProperty,
         ref List<ClientTupleKeyWithoutCondition> deleteRelations
@@ -197,7 +197,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
     ///     Processes relations for a modified entity.
     /// </summary>
     private static void ProcessModifiedEntity(
-        OpenFgaRelationAttribute attr,
+        SealedFgaRelationAttribute attr,
         PropertyEntry entityIdProperty,
         PropertyEntry relationProperty,
         ref List<ClientTupleKey> writeRelations,
@@ -246,26 +246,26 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
     /// <param name="propertyValue">The relation property value.</param>
     /// <returns>A tuple containing user and object tuple strings.</returns>
     private static (string userTupleStr, string objTupleStr) ExtractTupleStrings(
-        OpenFgaRelationAttribute attr,
+        SealedFgaRelationAttribute attr,
         object? entityIdValue,
         object? propertyValue
     ) {
         // Retrieve foreign key object's ID value
         var propertyOpenFgaTupleString = (string) propertyValue!
                                                  .GetType()
-                                                 .GetMethod(nameof(IOpenFgaTypeId<>.AsOpenFgaIdTupleString))!
+                                                 .GetMethod(nameof(ISealedFgaTypeId<>.AsOpenFgaIdTupleString))!
                                                  .Invoke(propertyValue, null)!;
 
         // Retrieve this entity's OpenFGA ID
         var entityOpenFgaTupleString = (string) entityIdValue!
                                                .GetType()
-                                               .GetMethod(nameof(IOpenFgaTypeId<>.AsOpenFgaIdTupleString))!
+                                               .GetMethod(nameof(ISealedFgaTypeId<>.AsOpenFgaIdTupleString))!
                                                .Invoke(entityIdValue, null)!;
 
         // Switch obj <-> user based on the relation's target type
         return attr.TargetType switch {
-            OpenFgaRelationTargetType.Object => (propertyOpenFgaTupleString, entityOpenFgaTupleString),
-            OpenFgaRelationTargetType.User => (entityOpenFgaTupleString, propertyOpenFgaTupleString),
+            SealedFgaRelationTargetType.Object => (propertyOpenFgaTupleString, entityOpenFgaTupleString),
+            SealedFgaRelationTargetType.User => (entityOpenFgaTupleString, propertyOpenFgaTupleString),
         };
     }
 }

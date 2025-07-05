@@ -9,7 +9,7 @@ using SealedFga.Util;
 
 namespace SealedFga.Analysis;
 
-internal class OpenFgaDataFlowVisitor(
+internal class SealedFgaDataFlowVisitor(
     GlobalFlowStateAnalysisContext analysisContext,
     Dictionary<INamedTypeSymbol, INamedTypeSymbol> interfaceRedirects,
     CheckedPermissionsByEntityVarDict checkedPermissionsByEntityId,
@@ -64,7 +64,7 @@ internal class OpenFgaDataFlowVisitor(
         if (instanceType is INamedTypeSymbol namedType && InheritsFromDbContext(namedType)) {
             diagnosticContext.ReportDiagnostic(
                 Diagnostic.Create(
-                    OpenFgaDiagnosticRules.FoundContextRule,
+                    SealedFgaDiagnosticRules.FoundContextRule,
                     originalOperation.Syntax.GetLocation(),
                     $"Found DbContext method call: {method.Name} on {namedType.Name}"
                 )

@@ -17,7 +17,7 @@ using SealedFga.Models;
 
 namespace SealedFga.Analysis;
 
-public class OpenFgaAnalysisSession(
+public class SealedFgaAnalysisSession(
     INamedTypeSymbol implementedByAttributeSymbol,
     INamedTypeSymbol fgaAuthorizeAttributeSymbol,
     INamedTypeSymbol fgaAuthorizeListAttributeSymbol,
@@ -124,7 +124,7 @@ public class OpenFgaAnalysisSession(
             foreach (var location in interfaceSymbol.Locations) {
                 context.ReportDiagnostic(
                     Diagnostic.Create(
-                        OpenFgaDiagnosticRules.PossiblyMisingImplementedByRule,
+                        SealedFgaDiagnosticRules.PossiblyMisingImplementedByRule,
                         location,
                         interfaceSymbol.Name
                     )
@@ -192,7 +192,7 @@ public class OpenFgaAnalysisSession(
             _ = GlobalFlowStateAnalysis.TryGetOrComputeResult(
                 cfg,
                 httpEndpointMethodContext.MethodSymbol,
-                ctx => new OpenFgaDataFlowVisitor(
+                ctx => new SealedFgaDataFlowVisitor(
                     ctx,
                     interfaceRedirects,
                     checkedPermissionsByEntityVar,
@@ -200,7 +200,7 @@ public class OpenFgaAnalysisSession(
                 ),
                 wellKnownTypeProvider,
                 context.Options,
-                OpenFgaDiagnosticRules.FoundContextRule,
+                SealedFgaDiagnosticRules.FoundContextRule,
                 true, // performValueContentAnalysis
                 false, // pessimisticAnalysis
                 out _,

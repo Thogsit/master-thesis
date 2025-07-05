@@ -1,16 +1,16 @@
 namespace SealedFga.AuthModel;
 
 /// <summary>
-///     Interface for OpenFGA entities.
+///     Interface for SealedFGA entities.
 /// </summary>
-public interface IOpenFgaType<TId> where TId : IOpenFgaTypeId<TId> {
+public interface ISealedFgaType<TId> where TId : ISealedFgaTypeId<TId> {
     /// <summary>
-    ///     The OpenFGA ID of this entity.
+    ///     The SealedFGA ID of this entity.
     /// </summary>
     public TId Id { get; set; }
 
     /// <summary>
-    ///     Returns the OpenFGA ID as a string in the format "type:id".
+    ///     Returns the SealedFGA ID as a string in the format "type:id".
     /// </summary>
     public string AsOpenFgaIdTupleString() => Id.AsOpenFgaIdTupleString();
 }

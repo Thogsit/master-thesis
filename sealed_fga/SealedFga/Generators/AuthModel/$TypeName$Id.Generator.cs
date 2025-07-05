@@ -14,7 +14,7 @@ public static class TypeNameIdGenerator {
 
               [TypeConverter(typeof(IdTypeConverter))]
               [JsonConverter(typeof(IdJsonConverter))]
-              public partial class {{idClassToGenerate.ClassName}} : IOpenFgaTypeId<{{idClassToGenerate.ClassName}}>, IEquatable<{{idClassToGenerate.ClassName}}>
+              public partial class {{idClassToGenerate.ClassName}} : ISealedFgaTypeId<{{idClassToGenerate.ClassName}}>, IEquatable<{{idClassToGenerate.ClassName}}>
               {
                   /// <summary>
                   ///     The ID's value.
@@ -128,9 +128,9 @@ public static class TypeNameIdGenerator {
 
     private static string GetTypeConverter(IdClassToGenerateData idClassToGenerate)
         => idClassToGenerate.Type switch {
-            OpenFgaTypeIdType.Guid
+            SealedFgaTypeIdType.Guid
                 => $"GuidIdTypeConverter<{idClassToGenerate.ClassName}>(g => new {idClassToGenerate.ClassName}(g), s => {idClassToGenerate.ClassName}.Parse(s))",
-            OpenFgaTypeIdType.String
+            SealedFgaTypeIdType.String
                 => $"StringIdTypeConverter<{idClassToGenerate.ClassName}>(s => {idClassToGenerate.ClassName}.Parse(s))",
             _ => throw new ArgumentOutOfRangeException(),
         };
@@ -142,14 +142,14 @@ public static class TypeNameIdGenerator {
         return idClassToGenerate.Type switch
 #pragma warning restore CS8524
         {
-            OpenFgaTypeIdType.Guid => strTypeConverter,
-            OpenFgaTypeIdType.String => strTypeConverter,
+            SealedFgaTypeIdType.Guid => strTypeConverter,
+            SealedFgaTypeIdType.String => strTypeConverter,
         };
     }
 
     private static HashSet<string> GetTypeDependentUsings(IdClassToGenerateData idClassToGenerate) {
         var usings = new HashSet<string>();
-        if (idClassToGenerate.Type == OpenFgaTypeIdType.Guid) usings.Add("System");
+        if (idClassToGenerate.Type == SealedFgaTypeIdType.Guid) usings.Add("System");
 
         return usings;
     }
@@ -159,8 +159,8 @@ public static class TypeNameIdGenerator {
         return idClassToGenerate.Type switch
 #pragma warning restore CS8524
         {
-            OpenFgaTypeIdType.Guid => $"Guid.Parse({attrName})",
-            OpenFgaTypeIdType.String => attrName,
+            SealedFgaTypeIdType.Guid => $"Guid.Parse({attrName})",
+            SealedFgaTypeIdType.String => attrName,
         };
     }
 
@@ -169,8 +169,8 @@ public static class TypeNameIdGenerator {
         return idClassToGenerate.Type switch
 #pragma warning restore CS8524
         {
-            OpenFgaTypeIdType.Guid => "Guid.NewGuid()",
-            OpenFgaTypeIdType.String => "\"\"",
+            SealedFgaTypeIdType.Guid => "Guid.NewGuid()",
+            SealedFgaTypeIdType.String => "\"\"",
         };
     }
 }
