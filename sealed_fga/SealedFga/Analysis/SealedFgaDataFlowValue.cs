@@ -28,9 +28,11 @@ internal class SealedFgaDataFlowValue(
 
     public bool Negated { get; } = negated;
 
-    public IAbstractAnalysisValue GetNegatedValue() => new SealedFgaDataFlowValue(CheckedPermissionsByEntityId, !Negated);
+    public IAbstractAnalysisValue GetNegatedValue()
+        => new SealedFgaDataFlowValue(CheckedPermissionsByEntityId, !Negated);
 
-    public bool Equals(IAbstractAnalysisValue other) => other is SealedFgaDataFlowValue otherValue && Equals(otherValue);
+    public bool Equals(IAbstractAnalysisValue other)
+        => other is SealedFgaDataFlowValue otherValue && Equals(otherValue);
 
     public bool Equals(SealedFgaDataFlowValue other) {
         var otherCheckedPermissionsByEntityId = other.CheckedPermissionsByEntityId;

@@ -5,8 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using OpenFga.Sdk.Client;
 using OpenFga.Sdk.Client.Model;
+using OpenFga.Sdk.Model;
 using SealedFga.AuthModel;
-using SealedFga.Models.JobPayloads;
 using SealedFga.Util;
 using TickerQ.Utilities;
 using TickerQ.Utilities.Interfaces.Managers;
@@ -49,6 +49,27 @@ public class SealedFgaService(
     }
 
     #region Strongly-Typed ID Methods
+
+    /// <summary>
+    ///     Modifies all tuples containing a reference to the old ID and modifies them to reference the new ID.
+    /// </summary>
+    /// <param name="oldId">The current identifier to be updated.</param>
+    /// <param name="newId">The new identifier to replace the old one.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
+    /// <typeparam name="TId">The type of the identifier, which implements <see cref="ISealedFgaTypeId{TId}" />.</typeparam>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ModifyIdAsync<TId>(
+        TId oldId,
+        TId newId,
+        CancellationToken cancellationToken = new()
+    ) where TId : ISealedFgaTypeId<TId>
+        => await ModifyIdAsync(
+            oldId.AsOpenFgaIdTupleString(),
+            newId.AsOpenFgaIdTupleString(),
+            IdUtil.GetNameByIdType(typeof(TId)),
+            cancellationToken
+        );
+
 
     /// <summary>
     ///     Ensures authorization using strongly typed IDs, throwing an exception if the check fails.
@@ -94,10 +115,11 @@ public class SealedFgaService(
     )
         where TUserId : ISealedFgaTypeId<TUserId>
         where TObjId : ISealedFgaTypeId<TObjId>
-        => await CheckAsync(
-            user.AsOpenFgaIdTupleString(),
-            relation.AsOpenFgaString(),
-            objectId.AsOpenFgaIdTupleString(),
+        => await CheckAsync(new TupleKey {
+                User = user.AsOpenFgaIdTupleString(),
+                Relation = relation.AsOpenFgaString(),
+                Object = objectId.AsOpenFgaIdTupleString(),
+            },
             cancellationToken
         );
 
@@ -116,10 +138,11 @@ public class SealedFgaService(
     )
         where TUserId : ISealedFgaTypeId<TUserId>
         where TObjId : ISealedFgaTypeId<TObjId>
-        => await QueueWrite(
-            user.AsOpenFgaIdTupleString(),
-            relation.AsOpenFgaString(),
-            objectId.AsOpenFgaIdTupleString()
+        => await QueueWrite(new TupleKey {
+                User = user.AsOpenFgaIdTupleString(),
+                Relation = relation.AsOpenFgaString(),
+                Object = objectId.AsOpenFgaIdTupleString(),
+            }
         );
 
     /// <summary>
@@ -137,10 +160,11 @@ public class SealedFgaService(
     )
         where TUserId : ISealedFgaTypeId<TUserId>
         where TObjId : ISealedFgaTypeId<TObjId>
-        => await QueueDelete(
-            user.AsOpenFgaIdTupleString(),
-            relation.AsOpenFgaString(),
-            objectId.AsOpenFgaIdTupleString()
+        => await QueueDelete(new TupleKey {
+                User = user.AsOpenFgaIdTupleString(),
+                Relation = relation.AsOpenFgaString(),
+                Object = objectId.AsOpenFgaIdTupleString(),
+            }
         );
 
     /// <summary>
@@ -155,11 +179,11 @@ public class SealedFgaService(
         where TUserId : ISealedFgaTypeId<TUserId>
         where TObjId : ISealedFgaTypeId<TObjId>
         => await QueueWrites(
-            operations.Select(op => (
-                    op.User.AsOpenFgaIdTupleString(),
-                    op.Relation.AsOpenFgaString(),
-                    op.Object.AsOpenFgaIdTupleString()
-                )
+            operations.Select(op => new TupleKey {
+                    User = op.User.AsOpenFgaIdTupleString(),
+                    Relation = op.Relation.AsOpenFgaString(),
+                    Object = op.Object.AsOpenFgaIdTupleString(),
+                }
             )
         );
 
@@ -175,11 +199,11 @@ public class SealedFgaService(
         where TUserId : ISealedFgaTypeId<TUserId>
         where TObjId : ISealedFgaTypeId<TObjId>
         => await QueueDeletes(
-            operations.Select(op => (
-                    op.User.AsOpenFgaIdTupleString(),
-                    op.Relation.AsOpenFgaString(),
-                    op.Object.AsOpenFgaIdTupleString()
-                )
+            operations.Select(op => new TupleKey {
+                    User = op.User.AsOpenFgaIdTupleString(),
+                    Relation = op.Relation.AsOpenFgaString(),
+                    Object = op.Object.AsOpenFgaIdTupleString(),
+                }
             )
         );
 
@@ -226,11 +250,11 @@ public class SealedFgaService(
         where TObjId : ISealedFgaTypeId<TObjId> {
         var checksAsList = checks.ToList();
         var results = await BatchCheckAsync(
-            checksAsList.Select(check => (
-                    check.User.AsOpenFgaIdTupleString(),
-                    check.Relation.AsOpenFgaString(),
-                    check.Object.AsOpenFgaIdTupleString()
-                )
+            checksAsList.Select(check => new TupleKey {
+                    User = check.User.AsOpenFgaIdTupleString(),
+                    Relation = check.Relation.AsOpenFgaString(),
+                    Object = check.Object.AsOpenFgaIdTupleString(),
+                }
             ),
             cancellationToken
         );
@@ -272,21 +296,17 @@ public class SealedFgaService(
     /// <summary>
     ///     Checks authorization using raw strings.
     /// </summary>
-    /// <param name="rawUser">The user string</param>
-    /// <param name="rawRelation">The relation string</param>
-    /// <param name="rawObject">The object string</param>
+    /// <param name="tuple">The tuple to check</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>True if the relation exists, false otherwise</returns>
     internal async Task<bool> CheckAsync(
-        string rawUser,
-        string rawRelation,
-        string rawObject,
+        TupleKey tuple,
         CancellationToken cancellationToken = new()
     ) {
         var response = await openFgaClient.Check(new ClientCheckRequest {
-                User = rawUser,
-                Relation = rawRelation,
-                Object = rawObject,
+                User = tuple.User,
+                Relation = tuple.Relation,
+                Object = tuple.Object,
             },
             cancellationToken: cancellationToken
         );
@@ -295,98 +315,246 @@ public class SealedFgaService(
     }
 
     /// <summary>
+    ///     Modifies all relations that include a reference to the specified old raw ID and updates them to reference the new
+    ///     raw ID.
+    /// </summary>
+    /// <param name="rawOldId">The current raw identifier to be updated.</param>
+    /// <param name="rawNewId">The new raw identifier to replace the old one.</param>
+    /// <param name="typeName">The name of the type associated with the ID for contextual identification.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ModifyIdAsync(
+        string rawOldId,
+        string rawNewId,
+        string typeName,
+        CancellationToken cancellationToken = new()
+    ) {
+        // Find relations TO the old ID
+        var oldRelationTuples = await ListAllRelationsToObjectAsync(
+            rawOldId,
+            cancellationToken
+        );
+
+        // Find relations FROM the old ID
+        oldRelationTuples.AddRange(
+            await ListAllRelationsFromUserAsync(
+                rawOldId,
+                typeName,
+                cancellationToken
+            )
+        );
+
+        // Build new relations to replace old ones with
+        var newRelationTuples = oldRelationTuples.Select(tuple => new TupleKey {
+                User = tuple.User.Replace(rawOldId, rawNewId),
+                Relation = tuple.Relation,
+                Object = tuple.Object.Replace(rawOldId, rawNewId),
+            }
+        ).ToList();
+
+        // Update relations to OpenFGA
+        await openFgaClient.Write(new ClientWriteRequest {
+                Deletes = oldRelationTuples.Select(tuple => new ClientTupleKeyWithoutCondition {
+                        User = tuple.User,
+                        Relation = tuple.Relation,
+                        Object = tuple.Object,
+                    }
+                ).ToList(),
+                Writes = newRelationTuples.Select(tuple => new ClientTupleKey {
+                        User = tuple.User,
+                        Relation = tuple.Relation,
+                        Object = tuple.Object,
+                    }
+                ).ToList(),
+            },
+            cancellationToken: cancellationToken
+        );
+    }
+
+    /// <summary>
     ///     Queues a write operation using raw strings.
     /// </summary>
-    /// <param name="rawUser">The user string</param>
-    /// <param name="rawRelation">The relation string</param>
-    /// <param name="rawObject">The object string</param>
-    internal async Task QueueWrite(string rawUser, string rawRelation, string rawObject)
+    /// <param name="tuple">The tuple to write</param>
+    internal async Task QueueWrite(TupleKey tuple)
         => await tickerQ.AddAsync(
             CreateTimeTicker(
                 SealedFgaQueue.FgaWriteJobName,
-                new FgaQueueWritePayload {
-                    RawUser = rawUser,
-                    RawRelation = rawRelation,
-                    RawObject = rawObject,
-                }
+                tuple
             )
         );
 
     /// <summary>
     ///     Queues a delete operation using raw strings.
     /// </summary>
-    /// <param name="user">The user string</param>
-    /// <param name="relation">The relation string</param>
-    /// <param name="objectId">The object string</param>
-    internal async Task QueueDelete(string user, string relation, string objectId)
+    /// <param name="tuple">The tuple to delete</param>
+    internal async Task QueueDelete(TupleKey tuple)
         => await tickerQ.AddAsync(
             CreateTimeTicker(
                 SealedFgaQueue.FgaDeleteJobName,
-                new FgaQueueDeletePayload {
-                    RawUser = user,
-                    RawRelation = relation,
-                    RawObject = objectId,
-                }
+                tuple
             )
         );
 
     /// <summary>
     ///     Queues multiple write operations using raw strings.
     /// </summary>
-    /// <param name="tuples">Collection of write operations with raw strings</param>
-    internal async Task QueueWrites(IEnumerable<(string User, string Relation, string Object)> tuples)
+    /// <param name="tuples">Collection of tuples to write</param>
+    internal async Task QueueWrites(IEnumerable<TupleKey> tuples)
         => await tickerQ.AddAsync(
             CreateTimeTicker(
                 SealedFgaQueue.FgaWriteMultipleJobName,
-                tuples.Select(t => new FgaQueueWritePayload {
-                        RawUser = t.User,
-                        RawRelation = t.Relation,
-                        RawObject = t.Object,
-                    }
-                ).ToList()
+                tuples
             )
         );
 
     /// <summary>
     ///     Queues multiple delete operations using raw strings.
     /// </summary>
-    /// <param name="tuples">Collection of delete operations with raw strings</param>
-    internal async Task QueueDeletes(IEnumerable<(string User, string Relation, string Object)> tuples)
+    /// <param name="tuples">Collection of tuples to delete</param>
+    internal async Task QueueDeletes(IEnumerable<TupleKey> tuples)
         => await tickerQ.AddAsync(
             CreateTimeTicker(
                 SealedFgaQueue.FgaDeleteMultipleJobName,
-                tuples.Select(t => new FgaQueueDeletePayload {
-                        RawUser = t.User,
-                        RawRelation = t.Relation,
-                        RawObject = t.Object,
-                    }
-                ).ToList()
+                tuples
             )
         );
 
     /// <summary>
+    ///     Queues a modify ID operation to replace all relations with an old ID with a new ID.
+    /// </summary>
+    /// <param name="oldId">The previous ID to be replaced</param>
+    /// <param name="newId">The new ID to replace the old one</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
+    /// <typeparam name="TId">The type of the IDs</typeparam>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    internal async Task QueueModifyId<TId>(
+        TId oldId,
+        TId newId,
+        CancellationToken cancellationToken = new()
+    ) where TId : ISealedFgaTypeId<TId>
+        => await tickerQ.AddAsync(
+            CreateTimeTicker(
+                SealedFgaQueue.FgaModifyIdJobName,
+                (oldId, newId)
+            ),
+            cancellationToken
+        );
+
+    /// <summary>
+    ///     Queues multiple write and delete operations for processing.
+    /// </summary>
+    /// <param name="writes">The collection of tuple keys to be written.</param>
+    /// <param name="deletes">The collection of tuple keys to be deleted.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    internal async Task QueueWriteAndDeletes(
+        IEnumerable<TupleKey> writes,
+        IEnumerable<TupleKey> deletes,
+        CancellationToken cancellationToken = new()
+    ) => await tickerQ.AddAsync(
+        CreateTimeTicker(
+            SealedFgaQueue.FgaWriteAndDeleteMultipleJobName,
+            (writes, deletes)
+        ),
+        cancellationToken
+    );
+
+    /// <summary>
     ///     Lists objects that a user has a specific relation to using raw strings.
     /// </summary>
-    /// <param name="user">The user string</param>
-    /// <param name="relation">The relation string</param>
-    /// <param name="objectType">The type of objects to list</param>
+    /// <param name="rawUser">The user string</param>
+    /// <param name="rawRelation">The relation string</param>
+    /// <param name="objectTypeName">The type of objects to list</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of object strings</returns>
     internal async Task<IEnumerable<string>> ListObjectsAsync(
-        string user,
-        string relation,
-        string objectType,
+        string rawUser,
+        string rawRelation,
+        string objectTypeName,
         CancellationToken cancellationToken = new()
     ) {
         var response = await openFgaClient.ListObjects(new ClientListObjectsRequest {
-                User = user,
-                Relation = relation,
-                Type = objectType,
+                User = rawUser,
+                Relation = rawRelation,
+                Type = objectTypeName,
             },
             cancellationToken: cancellationToken
         );
 
         return response.Objects;
+    }
+
+    /// <summary>
+    ///     Retrieves all relations associated with a specific object.
+    /// </summary>
+    /// <param name="rawObject">The ID of the object for which relations are to be listed.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation if needed.</param>
+    /// <returns>
+    ///     An asynchronous task containing a collection of tuples representing relations tied to the specified object.
+    /// </returns>
+    internal async Task<List<TupleKey>> ListAllRelationsToObjectAsync(
+        string rawObject,
+        CancellationToken cancellationToken = new()
+    ) {
+        var readRequest = new ClientReadRequest {
+            Object = rawObject,
+        };
+
+        var response = await openFgaClient.Read(readRequest, cancellationToken: cancellationToken);
+        return response.Tuples.Select(t => t.Key).ToList();
+    }
+
+    /// <summary>
+    ///     Retrieves all relation tuples where the specified user is related to other objects within the FGA system.
+    /// </summary>
+    /// <param name="rawUser">The ID of the user for whom relations are to be retrieved</param>
+    /// <param name="userTypeName">The type name of the user</param>
+    /// <param name="cancellationToken">Cancellation token to observe while waiting for the task to complete</param>
+    /// <returns>A task that represents the asynchronous operation, containing a list of relation tuples</returns>
+    internal async Task<List<TupleKey>> ListAllRelationsFromUserAsync(
+        string rawUser,
+        string userTypeName,
+        CancellationToken cancellationToken = new()
+    ) {
+        // Retrieve possible relations the object can have as a subject to other objects
+        var authModel = await openFgaClient.ReadAuthorizationModel(cancellationToken: cancellationToken);
+        var typeDefinitions = authModel.AuthorizationModel!.TypeDefinitions;
+        var listObjectsRequests = new List<ClientListObjectsRequest>();
+        foreach (var typeDef in typeDefinitions) {
+            foreach (var relationDef in typeDef.Metadata!.Relations!) {
+                var directlyRelatedUserTypes = relationDef.Value.DirectlyRelatedUserTypes!;
+                foreach (var relationRef in directlyRelatedUserTypes) {
+                    if (relationRef.Type == userTypeName) {
+                        listObjectsRequests.Add(
+                            new ClientListObjectsRequest {
+                                User = rawUser,
+                                Relation = relationDef.Key,
+                                Type = typeDef.Type,
+                            }
+                        );
+                    }
+                }
+            }
+        }
+
+        // Retrieve all objects we're related to and add the relations to our deletion list
+        var relationTuples = new List<TupleKey>();
+        foreach (var listObjectsBody in listObjectsRequests) {
+            var listObjectsResponse = await openFgaClient.ListObjects(
+                listObjectsBody,
+                cancellationToken: cancellationToken
+            );
+            relationTuples.AddRange(
+                listObjectsResponse.Objects.Select(obj => new TupleKey {
+                        User = rawUser,
+                        Relation = listObjectsBody.Relation,
+                        Object = obj,
+                    }
+                )
+            );
+        }
+
+        return relationTuples;
     }
 
     /// <summary>
@@ -396,13 +564,13 @@ public class SealedFgaService(
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Results in the same order as input checks</returns>
     internal async Task<IEnumerable<bool>> BatchCheckAsync(
-        IEnumerable<(string User, string Relation, string Object)> checks,
+        IEnumerable<TupleKey> checks,
         CancellationToken cancellationToken = new()
     ) {
         // TODO: OpenFGA .NET SDK does not support batch check operations directly. Switch to them when available.
         var checkTasks = checks.Select(async check => {
                 try {
-                    return await CheckAsync(check.User, check.Relation, check.Object, cancellationToken);
+                    return await CheckAsync(check, cancellationToken);
                 } catch (Exception) {
                     return false;
                 }
@@ -423,25 +591,16 @@ public class SealedFgaService(
     /// <param name="tuples">The list of tuples to write</param>
     /// <param name="ct">The cancellation token to cancel the operation if needed</param>
     /// <returns>
-    ///     A task that represents the asynchronous operation. Returns a list of booleans indicating which tuples were
-    ///     written (true) or already existed (false).
+    ///     A task that represents the asynchronous operation.
     /// </returns>
-    public async Task SafeWriteTupleAsync(List<FgaQueueWritePayload> tuples,
-        CancellationToken ct = new()) {
-        await SafeTupleOperationAsync(
-            tuples,
-            tuple => (tuple.RawUser, tuple.RawRelation, tuple.RawObject),
-            exists => !exists,
-            tuplesToProcess => tuplesToProcess.Select(tuple => new ClientTupleKey {
-                    User = tuple.RawUser,
-                    Relation = tuple.RawRelation,
-                    Object = tuple.RawObject,
-                }
-            ).ToList(),
-            processedTuples => new ClientWriteRequest { Writes = processedTuples },
-            ct
-        );
-    }
+    public async Task SafeWriteTupleAsync(
+        List<TupleKey> tuples,
+        CancellationToken ct = new()
+    ) => await SafeWriteAndDeleteTuplesAsync( // No delete tuples for write operation
+        tuples,
+        [],
+        ct
+    );
 
     /// <summary>
     ///     Safely deletes a list of tuples from OpenFGA after checking if they exist.
@@ -449,79 +608,65 @@ public class SealedFgaService(
     /// </summary>
     /// <param name="tuples">The list of tuples to delete</param>
     /// <param name="ct">The cancellation token to cancel the operation if needed</param>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. Returns a list of booleans indicating which tuples were
-    ///     deleted (true) or didn't exist (false).
-    /// </returns>
-    public async Task<List<bool>> SafeDeleteTupleAsync(
-        List<FgaQueueDeletePayload> tuples,
-        CancellationToken ct = new()
-    ) {
-        return await SafeTupleOperationAsync(
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task SafeDeleteTupleAsync(List<TupleKey> tuples, CancellationToken ct = new())
+        => await SafeWriteAndDeleteTuplesAsync([], // No write tuples for delete operation
             tuples,
-            tuple => (tuple.RawUser, tuple.RawRelation, tuple.RawObject),
-            exists => exists,
-            tuplesToProcess => tuplesToProcess.Select(tuple => new ClientTupleKeyWithoutCondition {
-                    User = tuple.RawUser,
-                    Relation = tuple.RawRelation,
-                    Object = tuple.RawObject,
-                }
-            ).ToList(),
-            processedTuples => new ClientWriteRequest { Deletes = processedTuples },
             ct
         );
-    }
 
     /// <summary>
-    ///     Core method that handles safe tuple operations (write/delete) by checking existence first.
+    ///     Executes a safe operation for tuple deletion and writing in batches, ensuring that
+    ///     only necessary tuples are processed based on the results of batch checks.
     /// </summary>
-    /// <typeparam name="TPayload">The type of the payload (write or delete)</typeparam>
-    /// <typeparam name="TClientTuple">The type of the client tuple (with or without condition)</typeparam>
-    /// <param name="tuples">The list of tuples to process</param>
-    /// <param name="extractCheckData">Function to extract check data from payload</param>
-    /// <param name="shouldProcess">Function to determine if tuple should be processed based on existence</param>
-    /// <param name="createClientTuples">Function to create client tuples from payloads</param>
-    /// <param name="createWriteRequest">Function to create the write request</param>
-    /// <param name="ct">The cancellation token</param>
-    /// <returns>A list of booleans indicating which tuples were processed</returns>
-    private async Task<List<bool>> SafeTupleOperationAsync<TPayload, TClientTuple>(
-        List<TPayload> tuples,
-        Func<TPayload, (string User, string Relation, string Object)> extractCheckData,
-        Func<bool, bool> shouldProcess,
-        Func<IEnumerable<TPayload>, List<TClientTuple>> createClientTuples,
-        Func<List<TClientTuple>, ClientWriteRequest> createWriteRequest,
-        CancellationToken ct
+    /// <param name="writeTuples">A list of tuples to be checked and potentially written.</param>
+    /// <param name="deleteTuples">A list of tuples to be checked and potentially deleted.</param>
+    /// <param name="ct">An optional cancellation token to cancel the operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task SafeWriteAndDeleteTuplesAsync(
+        List<TupleKey> writeTuples,
+        List<TupleKey> deleteTuples,
+        CancellationToken ct = new()
     ) {
-        var results = new List<bool>();
-        var tuplesToProcess = new List<TPayload>();
+        // Check all tuples to avoid conflicts
+        var deleteChecks = await BatchCheckAsync(
+            deleteTuples,
+            ct
+        );
+        var writeChecks = await BatchCheckAsync(
+            writeTuples,
+            ct
+        );
 
-        // Check whether the tuples already exist
-        var checks = tuples.Select(extractCheckData);
-        var checkResults = await BatchCheckAsync(checks, ct);
+        // Only process tuples that need to be deleted or written
+        var deleteRequests = deleteTuples
+                            .Where((_, index) => deleteChecks.ElementAt(index))
+                            .Select(tuple => new ClientTupleKeyWithoutCondition {
+                                     User = tuple.User,
+                                     Relation = tuple.Relation,
+                                     Object = tuple.Object,
+                                 }
+                             )
+                            .ToList();
+        var writeRequests = writeTuples
+                           .Where((_, index) => !writeChecks.ElementAt(index))
+                           .Select(tuple => new ClientTupleKey {
+                                    User = tuple.User,
+                                    Relation = tuple.Relation,
+                                    Object = tuple.Object,
+                                }
+                            )
+                           .ToList();
 
-        var checkResultsList = checkResults.ToList();
-        for (int i = 0; i < tuples.Count; i++) {
-            var tuple = tuples[i];
-            var exists = checkResultsList[i];
+        // Execute requests
+        if (deleteRequests.Count > 0 || writeRequests.Count > 0) {
+            var writeRequest = new ClientWriteRequest {
+                Deletes = deleteRequests,
+                Writes = writeRequests,
+            };
 
-            if (shouldProcess(exists)) {
-                results.Add(true);
-                tuplesToProcess.Add(tuple);
-            } else {
-                results.Add(false);
-            }
+            await openFgaClient.Write(writeRequest, cancellationToken: ct);
         }
-
-        if (tuplesToProcess.Count == 0) {
-            return results;
-        }
-
-        var clientTuples = createClientTuples(tuplesToProcess);
-        var writeRequest = createWriteRequest(clientTuples);
-
-        await openFgaClient.Write(writeRequest, cancellationToken: ct);
-
-        return results;
     }
 
     #endregion Write/Delete Methods

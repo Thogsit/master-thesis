@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SealedFga.Models.JobPayloads;
+using OpenFga.Sdk.Model;
+using SealedFga.AuthModel;
+using SealedFga.Models;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Models;
 
@@ -18,27 +20,27 @@ public class SealedFgaQueue(SealedFgaService sealedFgaService) {
     public const string FgaDeleteJobName = "FgaDeleteJob";
     public const string FgaWriteMultipleJobName = "FgaWriteMultipleJob";
     public const string FgaDeleteMultipleJobName = "FgaDeleteMultipleJob";
-
-    #region Job Handlers
+    public const string FgaWriteAndDeleteMultipleJobName = "FgaWriteAndDeleteMultipleJob";
+    public const string FgaModifyIdJobName = "FgaModifyIdJob";
 
     /// <summary>
     ///     Handles the FGA write job by processing the payload and writing a tuple key to the FGA client.
     /// </summary>
-    /// <param name="tickerContext">The context containing the request payload of type <see cref="FgaQueueWritePayload" />.</param>
+    /// <param name="tickerContext">The context containing the request payload.</param>
     /// <param name="ct">The cancellation token to cancel the operation if needed.</param>
     /// <returns>A task that represents the asynchronous operation of writing to the FGA client.</returns>
     [TickerFunction(FgaWriteJobName)]
-    public async Task FgaWriteJob(TickerFunctionContext<FgaQueueWritePayload> tickerContext, CancellationToken ct)
+    public async Task FgaWriteJob(TickerFunctionContext<TupleKey> tickerContext, CancellationToken ct)
         => await sealedFgaService.SafeWriteTupleAsync([tickerContext.Request], ct);
 
     /// <summary>
     ///     Handles the FGA delete job by processing the payload and deleting a tuple key in the FGA client.
     /// </summary>
-    /// <param name="tickerContext">The context containing the request payload of type <see cref="FgaQueueDeletePayload" />.</param>
+    /// <param name="tickerContext">The context containing the request payload.</param>
     /// <param name="ct">The cancellation token to cancel the operation if needed.</param>
     /// <returns>A task that represents the asynchronous operation of deleting in the FGA client.</returns>
     [TickerFunction(FgaDeleteJobName)]
-    public async Task FgaDeleteJob(TickerFunctionContext<FgaQueueDeletePayload> tickerContext, CancellationToken ct)
+    public async Task FgaDeleteJob(TickerFunctionContext<TupleKey> tickerContext, CancellationToken ct)
         => await sealedFgaService.SafeDeleteTupleAsync([tickerContext.Request], ct);
 
     /// <summary>
@@ -53,7 +55,7 @@ public class SealedFgaQueue(SealedFgaService sealedFgaService) {
     /// <returns>A task that represents the asynchronous operation of writing multiple entries to the FGA client.</returns>
     [TickerFunction(FgaWriteMultipleJobName)]
     public async Task FgaWriteMultipleJob(
-        TickerFunctionContext<IEnumerable<FgaQueueWritePayload>> tickerContext,
+        TickerFunctionContext<IEnumerable<TupleKey>> tickerContext,
         CancellationToken ct
     ) => await sealedFgaService.SafeWriteTupleAsync(tickerContext.Request.ToList(), ct);
 
@@ -68,9 +70,40 @@ public class SealedFgaQueue(SealedFgaService sealedFgaService) {
     /// <returns>A task that represents the asynchronous operation of deleting multiple tuple keys from the FGA client.</returns>
     [TickerFunction(FgaDeleteMultipleJobName)]
     public async Task FgaDeleteMultipleJob(
-        TickerFunctionContext<IEnumerable<FgaQueueDeletePayload>> tickerContext,
+        TickerFunctionContext<IEnumerable<TupleKey>> tickerContext,
         CancellationToken ct
     ) => await sealedFgaService.SafeDeleteTupleAsync(tickerContext.Request.ToList(), ct);
 
-    #endregion Job Handlers
+    [TickerFunction(FgaWriteAndDeleteMultipleJobName)]
+    public async Task FgaWriteAndDeleteMultipleJob(
+        TickerFunctionContext<(IEnumerable<TupleKey> Writes, IEnumerable<TupleKey> Deletes)> tickerContext,
+        CancellationToken ct
+    ) => await sealedFgaService.SafeWriteAndDeleteTuplesAsync(
+        tickerContext.Request.Writes.ToList(),
+        tickerContext.Request.Deletes.ToList(),
+        ct
+    );
+
+    /// <summary>
+    ///     Handles the FGA ID modification job by updating entries in the FGA client
+    ///     based on the old and new IDs provided in the payload.
+    /// </summary>
+    /// <param name="tickerContext">
+    ///     The context containing the payload with the old ID and the new ID to be updated.
+    /// </param>
+    /// <param name="ct">The cancellation token to cancel the operation if needed.</param>
+    /// <typeparam name="TId">
+    ///     The type of the ID being modified, which implements <see cref="ISealedFgaTypeId{TId}" />.
+    /// </typeparam>
+    /// <returns>
+    ///     A task that represents the asynchronous operation of modifying IDs in the FGA client.
+    /// </returns>
+    [TickerFunction(FgaModifyIdJobName)]
+    public async Task FgaModifyIdJob(
+        TickerFunctionContext<FgaQueueModifyIdPayload> tickerContext,
+        CancellationToken ct
+    ) {
+        var payload = tickerContext.Request;
+        await sealedFgaService.ModifyIdAsync(payload.RawOldId, payload.RawNewId, payload.TypeName, ct);
+    }
 }

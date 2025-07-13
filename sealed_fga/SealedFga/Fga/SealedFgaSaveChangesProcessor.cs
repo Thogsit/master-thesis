@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
-using OpenFga.Sdk.Client.Model;
+using OpenFga.Sdk.Model;
 using SealedFga.Attributes;
 using SealedFga.AuthModel;
 
@@ -27,24 +28,25 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
         }
 
         // Filters the change tracker for all entries that can possibly change OpenFGA relations
-        var relevantEntries = context.ChangeTracker
-                                     .Entries()
-                                     .Where(e => e.State
-                                                     is EntityState.Deleted
-                                                        or EntityState.Modified
-                                                        or EntityState.Added
-                                                 && e.Entity.GetType().GetInterfaces()
-                                                     .Any(i =>
-                                                          i.IsGenericType && i.GetGenericTypeDefinition() ==
-                                                          typeof(ISealedFgaType<>)
-                                                      )
-                                      );
+        var sealedFgaEntries = context.ChangeTracker
+                                      .Entries()
+                                      .Where(e => e.State
+                                                      is EntityState.Deleted
+                                                         or EntityState.Modified
+                                                         or EntityState.Added
+                                                  && e.Entity.GetType().GetInterfaces()
+                                                      .Any(i =>
+                                                           i.IsGenericType && i.GetGenericTypeDefinition() ==
+                                                           typeof(ISealedFgaType<>)
+                                                       )
+                                       );
 
         // Retrieve SealedFGA relations to write/delete
-        var writeRelations = new List<ClientTupleKey>();
-        var deleteRelations = new List<ClientTupleKeyWithoutCondition>();
-        foreach (var entry in relevantEntries) {
-            ProcessSingleEntityEntry(entry, ref writeRelations, ref deleteRelations);
+        var writeRelations = new List<TupleKey>();
+        var deleteRelations = new List<TupleKey>();
+        var modifiedIds = new List<(object oldId, object newId)>();
+        foreach (var entry in sealedFgaEntries) {
+            ProcessSingleEntityEntry(entry, ref writeRelations, ref deleteRelations, ref modifiedIds);
         }
 
         if (deleteRelations.Count <= 0 && writeRelations.Count <= 0) {
@@ -53,22 +55,28 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
 
         // Queue the relations to be written/deleted in OpenFGA
         var sealedFgaService = serviceProvider.GetRequiredService<SealedFgaService>();
-        _ = sealedFgaService.QueueDeletes(
-            deleteRelations.Select(dr => (
-                    dr.User,
-                    dr.Relation,
-                    dr.Object
-                )
-            )
+        _ = sealedFgaService.QueueWriteAndDeletes(
+            writeRelations,
+            deleteRelations
         );
-        _ = sealedFgaService.QueueWrites(
-            writeRelations.Select(wr => (
-                    wr.User,
-                    wr.Relation,
-                    wr.Object
-                )
-            )
-        );
+
+        // Queue the modified IDs to be updated in OpenFGA
+        foreach (var modifiedId in modifiedIds) {
+            // Get the actual type of the ID
+            var idType = modifiedId.oldId.GetType();
+
+            // Get the QueueModifyId method
+            var queueModifyIdMethod = typeof(SealedFgaService)
+               .GetMethod(nameof(SealedFgaService.QueueModifyId))!;
+
+            // Create the generic method with the specific type
+            var genericMethod = queueModifyIdMethod.MakeGenericMethod(idType);
+
+            // Call the generic method via reflection
+            genericMethod.Invoke(sealedFgaService,
+                [modifiedId.oldId, modifiedId.newId, CancellationToken.None]
+            );
+        }
     }
 
     /// <summary>
@@ -77,10 +85,12 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
     /// <param name="entry">The entity entry to process.</param>
     /// <param name="writeRelations">List to populate with relations to write.</param>
     /// <param name="deleteRelations">List to populate with relations to delete.</param>
+    /// <param name="modifiedIds">List to populate with modified IDs.</param>
     private static void ProcessSingleEntityEntry(
         EntityEntry entry,
-        ref List<ClientTupleKey> writeRelations,
-        ref List<ClientTupleKeyWithoutCondition> deleteRelations
+        ref List<TupleKey> writeRelations,
+        ref List<TupleKey> deleteRelations,
+        ref List<(object oldId, object newId)> modifiedIds
     ) {
         var entityType = entry.Entity.GetType();
         var entityIdProperty = entry.Property(nameof(ISealedFgaType<>.Id));
@@ -100,6 +110,16 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
                 ref deleteRelations
             );
         }
+
+        // If the entity is modified, the ID property might have been changed, so we need to change all tuples with it
+        if (entry.State == EntityState.Modified
+            && entityIdProperty.CurrentValue != entityIdProperty.OriginalValue) {
+            modifiedIds.Add(new ValueTuple<object, object>(
+                    entityIdProperty.OriginalValue,
+                    entityIdProperty.CurrentValue
+                )
+            );
+        }
     }
 
     /// <summary>
@@ -116,8 +136,8 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
         SealedFgaRelationAttribute relationAttribute,
         PropertyEntry entityIdProperty,
         PropertyEntry relationProperty,
-        ref List<ClientTupleKey> writeRelations,
-        ref List<ClientTupleKeyWithoutCondition> deleteRelations
+        ref List<TupleKey> writeRelations,
+        ref List<TupleKey> deleteRelations
     ) {
         // We're only interested in changes, so disable the "default case missing" warning.
         // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
@@ -154,7 +174,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
         SealedFgaRelationAttribute attr,
         PropertyEntry entityIdProperty,
         PropertyEntry relationProperty,
-        ref List<ClientTupleKey> writeRelations
+        ref List<TupleKey> writeRelations
     ) {
         var (userTupleStr, objTupleStr) = ExtractTupleStrings(
             attr,
@@ -162,7 +182,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
             relationProperty.CurrentValue
         );
 
-        writeRelations.Add(new ClientTupleKey {
+        writeRelations.Add(new TupleKey {
                 User = userTupleStr,
                 Relation = attr.Relation,
                 Object = objTupleStr,
@@ -177,7 +197,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
         SealedFgaRelationAttribute attr,
         PropertyEntry entityIdProperty,
         PropertyEntry relationProperty,
-        ref List<ClientTupleKeyWithoutCondition> deleteRelations
+        ref List<TupleKey> deleteRelations
     ) {
         var (userTupleStr, objTupleStr) = ExtractTupleStrings(
             attr,
@@ -185,7 +205,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
             relationProperty.CurrentValue
         );
 
-        deleteRelations.Add(new ClientTupleKeyWithoutCondition {
+        deleteRelations.Add(new TupleKey {
                 User = userTupleStr,
                 Relation = attr.Relation,
                 Object = objTupleStr,
@@ -200,10 +220,10 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
         SealedFgaRelationAttribute attr,
         PropertyEntry entityIdProperty,
         PropertyEntry relationProperty,
-        ref List<ClientTupleKey> writeRelations,
-        ref List<ClientTupleKeyWithoutCondition> deleteRelations
+        ref List<TupleKey> writeRelations,
+        ref List<TupleKey> deleteRelations
     ) {
-        // Only process if the ID has actually changed
+        // Only process if the relation tuple has actually changed
         if (entityIdProperty.CurrentValue == entityIdProperty.OriginalValue
             && relationProperty.CurrentValue == relationProperty.OriginalValue) {
             return;
@@ -216,7 +236,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
             relationProperty.OriginalValue
         );
 
-        deleteRelations.Add(new ClientTupleKeyWithoutCondition {
+        deleteRelations.Add(new TupleKey {
                 User = prevUserTupleStr,
                 Relation = attr.Relation,
                 Object = prevObjTupleStr,
@@ -230,7 +250,7 @@ public class SealedFgaSaveChangesProcessor(IServiceProvider serviceProvider) {
             relationProperty.CurrentValue
         );
 
-        writeRelations.Add(new ClientTupleKey {
+        writeRelations.Add(new TupleKey {
                 User = userTupleStr,
                 Relation = attr.Relation,
                 Object = objTupleStr,
