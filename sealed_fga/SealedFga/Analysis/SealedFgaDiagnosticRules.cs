@@ -22,4 +22,14 @@ public static class SealedFgaDiagnosticRules {
         true,
         customTags: [WellKnownDiagnosticTags.CompilationEnd]
     );
+
+    public static readonly DiagnosticDescriptor MissingAuthorizationRule = new(
+        "SFGA005",
+        "Missing authorization check",
+        "Missing authorization checks for {0}: {1}",
+        "Security",
+        DiagnosticSeverity.Warning,
+        true,
+        customTags: [WellKnownDiagnosticTags.CompilationEnd]
+    );
 }

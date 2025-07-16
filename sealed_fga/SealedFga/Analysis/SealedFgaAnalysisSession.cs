@@ -10,7 +10,6 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.GlobalFlowStateAnalysis;
-using SealedFga.Models;
 
 // We need this to be able to use the "internal" GlobalFlowStateAnalysis
 [assembly: IgnoresAccessChecksTo("Microsoft.CodeAnalysis.AnalyzerUtilities")]
@@ -150,9 +149,39 @@ public class SealedFgaAnalysisSession(
             // Should not happen?
             if (cfg == null) continue;
 
-            // Extract auth data from annotated parameters
-            var checkedPermissionsByEntityVar = new CheckedPermissionsByEntityVarDict();
-            foreach (var httpParamSymbol in httpEndpointMethodContext.MethodSymbol.Parameters)
+            // Extract auth data from annotated parameters using lattice-based approach
+            var initialAuthorizationState = CreateInitialAuthorizationState(httpEndpointMethodContext);
+
+            // Execute the data flow analysis for the current HTTP endpoint method
+            _ = GlobalFlowStateAnalysis.TryGetOrComputeResult(
+                cfg,
+                httpEndpointMethodContext.MethodSymbol,
+                ctx => new SealedFgaDataFlowVisitor(
+                    ctx,
+                    interfaceRedirects,
+                    initialAuthorizationState,
+                    context
+                ),
+                wellKnownTypeProvider,
+                context.Options,
+                SealedFgaDiagnosticRules.FoundContextRule,
+                true, // performValueContentAnalysis
+                false, // pessimisticAnalysis
+                out _,
+                InterproceduralAnalysisKind.ContextSensitive
+            );
+        }
+    }
+
+    /// <summary>
+    /// Creates the initial authorization state from parameter annotations.
+    /// </summary>
+    /// <param name="httpEndpointMethodContext">The HTTP endpoint method context</param>
+    /// <returns>Initial authorization state with permissions from parameter annotations</returns>
+    private SealedFgaDataFlowValue CreateInitialAuthorizationState(HttpEndpointAnalysisContext httpEndpointMethodContext) {
+        var authorizationBuilder = System.Collections.Immutable.ImmutableDictionary.CreateBuilder<ObjectIdentifier, PermissionSet>();
+
+        foreach (var httpParamSymbol in httpEndpointMethodContext.MethodSymbol.Parameters) {
             foreach (var attrData in httpParamSymbol.GetAttributes()) {
                 if (attrData.AttributeClass is null) continue;
 
@@ -171,11 +200,20 @@ public class SealedFgaAnalysisSession(
                         }
                     }
 
-                    if (relParam is not null && paramNameParam is not null) {
-                        // ID parameter, e.g. "SecretEntityId secretId"
-                        checkedPermissionsByEntityVar.AddPermission(paramNameParam, relParam);
-                        // Entity parameter, e.g. "SecretEntity secret"
-                        checkedPermissionsByEntityVar.AddPermission(httpParamSymbol.Name, relParam);
+                    if (relParam is not null) {
+                        // Entity parameter permission (e.g. "SecretEntity secret")
+                        var entityObjectId = new ObjectIdentifier.ParameterReference(httpParamSymbol.Type);
+                        AddPermissionToBuilder(authorizationBuilder, entityObjectId, relParam);
+
+                        // ID parameter permission if specified (e.g. "SecretEntityId secretId")
+                        if (paramNameParam is not null) {
+                            // Find the ID parameter by name
+                            var idParam = httpEndpointMethodContext.MethodSymbol.Parameters.FirstOrDefault(p => p.Name == paramNameParam);
+                            if (idParam != null) {
+                                var idObjectId = new ObjectIdentifier.ParameterReference(idParam.Type);
+                                AddPermissionToBuilder(authorizationBuilder, idObjectId, relParam);
+                            }
+                        }
                     }
                 }
 
@@ -183,29 +221,31 @@ public class SealedFgaAnalysisSession(
                 if (SymbolEqualityComparer.Default.Equals(attrData.AttributeClass, fgaAuthorizeListAttributeSymbol)) {
                     if (attrData.NamedArguments.Length > 0) {
                         var relParam = (string) attrData.NamedArguments[0].Value.Value!;
-                        checkedPermissionsByEntityVar.AddPermission(httpParamSymbol.Name, relParam);
+                        var entityObjectId = new ObjectIdentifier.ParameterReference(httpParamSymbol.Type);
+                        AddPermissionToBuilder(authorizationBuilder, entityObjectId, relParam);
                     }
                 }
             }
+        }
 
-            // Execute the data flow analysis for the current HTTP endpoint method
-            _ = GlobalFlowStateAnalysis.TryGetOrComputeResult(
-                cfg,
-                httpEndpointMethodContext.MethodSymbol,
-                ctx => new SealedFgaDataFlowVisitor(
-                    ctx,
-                    interfaceRedirects,
-                    checkedPermissionsByEntityVar,
-                    context
-                ),
-                wellKnownTypeProvider,
-                context.Options,
-                SealedFgaDiagnosticRules.FoundContextRule,
-                true, // performValueContentAnalysis
-                false, // pessimisticAnalysis
-                out _,
-                InterproceduralAnalysisKind.ContextSensitive
-            );
+        var authorizationLattice = new AuthorizationLattice(authorizationBuilder.ToImmutable());
+        return new SealedFgaDataFlowValue(authorizationLattice);
+    }
+
+    /// <summary>
+    /// Adds a permission to the authorization builder, handling existing permissions.
+    /// </summary>
+    /// <param name="builder">The authorization builder</param>
+    /// <param name="objectId">The object identifier</param>
+    /// <param name="permission">The permission to add</param>
+    private static void AddPermissionToBuilder(
+        System.Collections.Immutable.ImmutableDictionary<ObjectIdentifier, PermissionSet>.Builder builder,
+        ObjectIdentifier objectId,
+        string permission) {
+        if (builder.TryGetValue(objectId, out var existingPermissions)) {
+            builder[objectId] = existingPermissions.Add(permission);
+        } else {
+            builder[objectId] = new PermissionSet([permission]);
         }
     }
 }

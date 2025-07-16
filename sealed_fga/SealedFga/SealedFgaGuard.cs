@@ -3,7 +3,7 @@ using SealedFga.AuthModel;
 
 namespace SealedFga;
 
-public static class SealedFga {
+public static class SealedFgaGuard {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void RequireCheck<TId, TRel>(ISealedFgaType<TId> entity, params TRel[] relations)
         where TId : ISealedFgaTypeId<TId>

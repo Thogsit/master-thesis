@@ -13,7 +13,8 @@ public record UpdateSecretRequestDto(string Value);
 [ApiController]
 [Route("secrets")]
 public class SecretController(
-    SealedFgaSampleContext context
+    SealedFgaSampleContext context,
+    ISecretService secretService
 ) : ControllerBase {
     [HttpGet]
     public IActionResult GetAllSecrets(
@@ -40,6 +41,8 @@ public class SecretController(
 
         var secrets = await context.SecretEntities.ToListAsync();
         var secretsSync = context.SecretEntities.ToList();
+
+        var someSecret = secretService.GetSecretByIdAsync(secretId);
 
         return Ok(secret);
     }

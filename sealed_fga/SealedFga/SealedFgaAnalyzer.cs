@@ -12,10 +12,11 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = [
         SealedFgaDiagnosticRules.FoundContextRule,
         SealedFgaDiagnosticRules.PossiblyMisingImplementedByRule,
+        SealedFgaDiagnosticRules.MissingAuthorizationRule,
     ];
 
     public override void Initialize(AnalysisContext context) {
-        context.EnableConcurrentExecution(); // TODO: Put back in when done with debugging
+        //context.EnableConcurrentExecution(); // TODO: Put back in when done with debugging
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
 
         context.RegisterCompilationStartAction(compilationStartContext => {
