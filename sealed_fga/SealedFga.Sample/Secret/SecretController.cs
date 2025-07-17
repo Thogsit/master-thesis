@@ -56,6 +56,13 @@ public class SecretController(
         var agencies = await context.AgencyEntities.ToListAsync();
         var newAgency = agencies.First(a => a.Id != secret.OwningAgencyId);
 
+        // Create a copy; should receive all checked permissions
+        var newId = secretId;
+
+        SealedFgaGuard.RequireCheck(newId, SecretEntityIdAttributes.can_edit);
+        SealedFgaGuard.RequireCheck(secret, SecretEntityIdAttributes.can_edit);
+        SealedFgaGuard.RequireCheck(secretId, SecretEntityIdAttributes.can_edit);
+
         secret.OwningAgencyId = newAgency.Id;
         await context.SaveChangesAsync();
 
