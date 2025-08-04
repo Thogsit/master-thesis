@@ -37,6 +37,9 @@
 
     <PackageReference Include="TickerQ" Version="2.2.2" />
     <PackageReference Include="TickerQ.EntityFrameworkCore" Version="2.2.2" />
+    <PackageReference Include="TickerQ.Dashboard" Version="2.2.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgMicrosoft_EntityFrameworkCore_Relational)\lib\netstandard2.0\*.dll" />
     <!-- Can be used if TickerQ needs some changes
     <Reference Include="TickerQ">
       <HintPath>..\..\..\TickerQ\src\TickerQ\bin\Release\netstandard2.1\TickerQ.dll</HintPath>
@@ -49,9 +52,6 @@
     </Reference>
     <ProjectReference Include="..\..\..\TickerQ\src\TickerQ.SourceGenerator\TickerQ.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     -->
-    <PackageReference Include="TickerQ.Dashboard" Version="2.2.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
-    <Analyzer Include="$(PkgMicrosoft_EntityFrameworkCore_Relational)\lib\netstandard2.0\*.dll" />
 
     <!-- The patched DLL seems to lead to runtime problems.
     Instead we use the original one as seen above and disable runtime permission checks by mimicking the IgnoresAccessChecksToAttribute

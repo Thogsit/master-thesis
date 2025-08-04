@@ -11,7 +11,6 @@ using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.GlobalFlowStateAnalysis;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis;
-using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis;
 
 // We need this to be able to use the "internal" GlobalFlowStateAnalysis
 [assembly: IgnoresAccessChecksTo("Microsoft.CodeAnalysis.AnalyzerUtilities")]
@@ -151,30 +150,33 @@ public class SealedFgaAnalysisSession(
             // Should not happen?
             if (cfg == null) continue;
 
-            // First, run ValueContentAnalysis to get copy relationship information
-            _ = ValueContentAnalysis.TryGetOrComputeResult(
+            // First, run PointsToAnalysis for de-duplicating reference copies
+            var interproceduralAnalysisConfiguration = InterproceduralAnalysisConfiguration.Create(
+                context.Options,
+                SealedFgaDiagnosticRules.MissingAuthorizationRule,
+                cfg,
+                context.Compilation,
+                InterproceduralAnalysisKind.ContextSensitive,
+                defaultMaxInterproceduralMethodCallChain: 4
+            );
+            var pointsToAnalysisResult = PointsToAnalysis.TryGetOrComputeResult(
                 cfg,
                 httpEndpointMethodContext.MethodSymbol,
-                wellKnownTypeProvider,
                 context.Options,
-                SealedFgaDiagnosticRules.FoundContextRule,
+                wellKnownTypeProvider,
                 PointsToAnalysisKind.Complete,
-                out var copyAnalysisResult,
-                out var pointsToAnalysisResult,
-                InterproceduralAnalysisKind.ContextSensitive,
-                performCopyAnalysisIfNotUserConfigured: true
-            );
-
-            // Should not happen?
-            if (copyAnalysisResult == null) {
-                continue;
-            }
+                interproceduralAnalysisConfiguration,
+                null, // TODO: Maybe override?
+                pessimisticAnalysis: false, // IMPORTANT; if true, most locations are unknown
+                performCopyAnalysis: false // Seems irrelevant
+            )!;
 
             // Extract auth data from annotated parameters using lattice-based approach
-            var initialAuthorizationState = CreateInitialAuthorizationState(httpEndpointMethodContext,
-                cfg,
-                wellKnownTypeProvider,
-                pointsToAnalysisResult!
+            // Block at index 1 contains the parameter symbols
+            var pointsToBlockAnalysisResult = pointsToAnalysisResult[cfg.Blocks[1]];
+            var initialAuthorizationState = CreateInitialAuthorizationState(
+                httpEndpointMethodContext,
+                pointsToBlockAnalysisResult
             );
 
             // Execute the data flow analysis for the current HTTP endpoint method
@@ -186,12 +188,12 @@ public class SealedFgaAnalysisSession(
                     interfaceRedirects,
                     initialAuthorizationState,
                     context,
-                    copyAnalysisResult
+                    pointsToAnalysisResult
                 ),
                 wellKnownTypeProvider,
                 context.Options,
                 SealedFgaDiagnosticRules.FoundContextRule,
-                true, // performValueContentAnalysis
+                false, // performValueContentAnalysis
                 false, // pessimisticAnalysis
                 out _,
                 InterproceduralAnalysisKind.ContextSensitive
@@ -203,17 +205,13 @@ public class SealedFgaAnalysisSession(
     ///     Creates the initial authorization state from parameter annotations.
     /// </summary>
     /// <param name="httpEndpointMethodContext">The HTTP endpoint method context</param>
-    /// <param name="cfg">The control flow graph</param>
-    /// <param name="wellKnownTypeProvider">The well-known type provider</param>
-    /// <param name="pointsToAnalysisResult">The points-to analysis result</param>
+    /// <param name="pointsToBlockAnalysisResult">The points-to analysis result of the parameter declaration block</param>
     /// <returns>Initial authorization state with permissions from parameter annotations</returns>
     private SealedFgaDataFlowValue CreateInitialAuthorizationState(
         HttpEndpointAnalysisContext httpEndpointMethodContext,
-        ControlFlowGraph cfg,
-        WellKnownTypeProvider wellKnownTypeProvider,
-        PointsToAnalysisResult pointsToAnalysisResult
+        PointsToBlockAnalysisResult pointsToBlockAnalysisResult
     ) {
-        var authorizationBuilder = ImmutableDictionary.CreateBuilder<AnalysisEntity, PermissionSet>();
+        var authorizationBuilder = ImmutableDictionary.CreateBuilder<AbstractLocation, PermissionSet>();
 
         foreach (var httpParamSymbol in httpEndpointMethodContext.MethodSymbol.Parameters) {
             foreach (var attrData in httpParamSymbol.GetAttributes()) {
@@ -235,33 +233,33 @@ public class SealedFgaAnalysisSession(
                     }
 
                     if (relParam is not null) {
-                        // Entity parameter permission (e.g. "SecretEntity secret")
-                        var entityAnalysisEntity = AnalysisEntity.Create(httpParamSymbol,
-                            ImmutableArray<AbstractIndex>.Empty,
-                            httpParamSymbol.Type,
-                            PointsToAbstractValue.Unknown,
-                            null,
-                            null
+                        var httpParamPointsToVal = GetPointsToValueByParamSymbol(
+                            pointsToBlockAnalysisResult,
+                            httpParamSymbol
                         );
-                        AddPermissionToBuilder(authorizationBuilder, entityAnalysisEntity, relParam);
+                        AddPermissionToBuilder(
+                            authorizationBuilder,
+                            httpParamPointsToVal.Locations,
+                            relParam
+                        );
 
                         // ID parameter permission if specified (e.g. "SecretEntityId secretId")
                         if (paramNameParam is not null) {
                             // Find the ID parameter by name
-                            var idParam =
+                            var idParamSymbol =
                                 httpEndpointMethodContext.MethodSymbol.Parameters.FirstOrDefault(p =>
                                     p.Name == paramNameParam
                                 );
-                            if (idParam != null) {
-                                var idAnalysisEntity = AnalysisEntity.Create(
-                                    idParam,
-                                    ImmutableArray<AbstractIndex>.Empty,
-                                    idParam.Type,
-                                    PointsToAbstractValue.Unknown,
-                                    null,
-                                    null
+                            if (idParamSymbol != null) {
+                                var idParamPointsToVal = GetPointsToValueByParamSymbol(
+                                    pointsToBlockAnalysisResult,
+                                    idParamSymbol
                                 );
-                                AddPermissionToBuilder(authorizationBuilder, idAnalysisEntity, relParam);
+                                AddPermissionToBuilder(
+                                    authorizationBuilder,
+                                    idParamPointsToVal.Locations,
+                                    relParam
+                                );
                             }
                         }
                     }
@@ -271,15 +269,15 @@ public class SealedFgaAnalysisSession(
                 if (SymbolEqualityComparer.Default.Equals(attrData.AttributeClass, fgaAuthorizeListAttributeSymbol)) {
                     if (attrData.NamedArguments.Length > 0) {
                         var relParam = (string) attrData.NamedArguments[0].Value.Value!;
-                        var entityAnalysisEntity = AnalysisEntity.Create(
-                            httpParamSymbol,
-                            ImmutableArray<AbstractIndex>.Empty,
-                            httpParamSymbol.Type,
-                            PointsToAbstractValue.Unknown,
-                            null,
-                            null
+                        var httpParamPointsToVal = GetPointsToValueByParamSymbol(
+                            pointsToBlockAnalysisResult,
+                            httpParamSymbol
                         );
-                        AddPermissionToBuilder(authorizationBuilder, entityAnalysisEntity, relParam);
+                        AddPermissionToBuilder(
+                            authorizationBuilder,
+                            httpParamPointsToVal.Locations,
+                            relParam
+                        );
                     }
                 }
             }
@@ -290,19 +288,52 @@ public class SealedFgaAnalysisSession(
     }
 
     /// <summary>
+    ///     Retrieves the PointsToAbstractValue for a given parameter symbol from the PointsToBlockAnalysisResult.
+    /// </summary>
+    /// <param name="blockResult">The PointsToBlockAnalysisResult that contains data mapping entities with abstract values.</param>
+    /// <param name="symbol">The parameter symbol whose PointsToAbstractValue is to be retrieved.</param>
+    /// <returns>The PointsToAbstractValue associated with the provided parameter symbol.</returns>
+    private static PointsToAbstractValue GetPointsToValueByParamSymbol(
+        PointsToBlockAnalysisResult blockResult,
+        IParameterSymbol symbol
+    ) {
+        var key = blockResult.Data.Keys.First(k =>
+            SymbolEqualityComparer.Default.Equals(k.Symbol, symbol)
+        );
+        return blockResult.Data[key];
+    }
+
+    /// <summary>
     ///     Adds a permission to the authorization builder, handling existing permissions.
     /// </summary>
     /// <param name="builder">The authorization builder</param>
-    /// <param name="entity">The analysis entity</param>
+    /// <param name="location">The analysis entity</param>
     /// <param name="permission">The permission to add</param>
     private static void AddPermissionToBuilder(
-        ImmutableDictionary<AnalysisEntity, PermissionSet>.Builder builder,
-        AnalysisEntity entity,
-        string permission) {
-        if (builder.TryGetValue(entity, out var existingPermissions)) {
-            builder[entity] = existingPermissions.Add(permission);
+        ImmutableDictionary<AbstractLocation, PermissionSet>.Builder builder,
+        AbstractLocation location,
+        string permission
+    ) {
+        if (builder.TryGetValue(location, out var existingPermissions)) {
+            builder[location] = existingPermissions.Add(permission);
         } else {
-            builder[entity] = new PermissionSet([permission]);
+            builder[location] = new PermissionSet([permission]);
+        }
+    }
+
+    /// <summary>
+    /// Adds a permission to the builder for each specified location.
+    /// </summary>
+    /// <param name="builder">The dictionary builder to which permissions are added.</param>
+    /// <param name="locations">The collection of abstract locations associated with the permissions.</param>
+    /// <param name="permission">The permission to be added for each location.</param>
+    private static void AddPermissionToBuilder(
+        ImmutableDictionary<AbstractLocation, PermissionSet>.Builder builder,
+        IEnumerable<AbstractLocation> locations,
+        string permission
+    ) {
+        foreach (var location in locations) {
+            AddPermissionToBuilder(builder, location, permission);
         }
     }
 }

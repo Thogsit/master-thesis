@@ -3,17 +3,11 @@ using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.GlobalFlowStateAnalysis;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis;
 using Microsoft.CodeAnalysis.Operations;
-using Microsoft.EntityFrameworkCore;
 using SealedFga.Fga;
 using SealedFga.Util;
-using CopyAnalysisResult =
-    Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.DataFlowAnalysisResult<
-        Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.CopyAnalysis.CopyBlockAnalysisResult,
-        Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.CopyAnalysis.CopyAbstractValue>;
 
 namespace SealedFga.Analysis;
 
@@ -22,10 +16,8 @@ internal class SealedFgaDataFlowVisitor(
     Dictionary<INamedTypeSymbol, INamedTypeSymbol> interfaceRedirects,
     SealedFgaDataFlowValue initialAuthorizationState,
     CompilationAnalysisContext diagnosticContext,
-    CopyAnalysisResult copyAnalysisResult
+    PointsToAnalysisResult pointsToAnalysisResult
 ) : GlobalFlowStateValueSetFlowOperationVisitor(analysisContext, true) {
-    private readonly CopyAnalysisResult _copyAnalysisResult = copyAnalysisResult;
-
     /// <summary>
     ///     Visits a method invocation.
     ///     Overriden to replace the target method if necessary to imitate dependency injection.
@@ -82,14 +74,14 @@ internal class SealedFgaDataFlowVisitor(
         if (containingType.Name == nameof(SealedFgaService) &&
             containingType.ContainingNamespace.FullName() == Settings.FgaNamespace &&
             methodName is nameof(SealedFgaService.CheckAsync) or nameof(SealedFgaService.EnsureCheckAsync)) {
-            return HandleSealedFgaServiceCall(method, visitedArguments, originalOperation, defaultValue);
+            return HandleSealedFgaServiceCall(visitedArguments, defaultValue);
         }
 
         // Check for SealedFga.RequireCheck
         if (containingType.Name == nameof(SealedFgaGuard) &&
             containingType.ContainingNamespace.FullName() == Settings.PackageNamespace &&
             methodName == nameof(SealedFgaGuard.RequireCheck)) {
-            return HandleRequireCheckCall(method, visitedArguments, originalOperation, defaultValue);
+            return HandleRequireCheckCall(visitedArguments, originalOperation, defaultValue);
         }
 
         // For non-authorization methods, return null to indicate no change
@@ -101,9 +93,7 @@ internal class SealedFgaDataFlowVisitor(
     ///     These calls add permissions to the authorization state.
     /// </summary>
     private GlobalFlowStateAnalysisValueSet HandleSealedFgaServiceCall(
-        IMethodSymbol method,
         ImmutableArray<IArgumentOperation> visitedArguments,
-        IOperation originalOperation,
         GlobalFlowStateAnalysisValueSet defaultValue
     ) {
         if (visitedArguments.Length < 3) {
@@ -113,15 +103,14 @@ internal class SealedFgaDataFlowVisitor(
         try {
             // Extract object identifier from arguments
             // Arguments: user, relation, objectId, (optional cancellationToken)
-            var objectIdArgument = visitedArguments[2]; // Third argument is objectId
+            var objectIdArgument = visitedArguments[2].Value; // Third argument is objectId
             var relationArgument = visitedArguments[1]; // Second argument is relation
 
-            var analysisEntity = ExtractAnalysisEntity(objectIdArgument);
+            var pointsToValue = ExtractPointsToValue(objectIdArgument);
             var relation = ExtractRelationName(relationArgument);
 
-            if (analysisEntity != null && relation != null) {
-                // Create a new authorization state with the added permission
-                return CreateValueWithPermission(defaultValue, analysisEntity, relation);
+            if (pointsToValue != null && relation != null) {
+                return CreateValueWithPermission(defaultValue, pointsToValue, relation);
             }
         } catch {
             // If extraction fails, return default value
@@ -135,7 +124,6 @@ internal class SealedFgaDataFlowVisitor(
     ///     These calls verify that required permissions exist in the current state.
     /// </summary>
     private GlobalFlowStateAnalysisValueSet HandleRequireCheckCall(
-        IMethodSymbol method,
         ImmutableArray<IArgumentOperation> visitedArguments,
         IOperation originalOperation,
         GlobalFlowStateAnalysisValueSet defaultValue) {
@@ -149,12 +137,11 @@ internal class SealedFgaDataFlowVisitor(
             var entityArgument = visitedArguments[0];
             var relationsArgument = visitedArguments[1];
 
-            var analysisEntity = ExtractAnalysisEntity(entityArgument);
+            var pointsToValue = ExtractPointsToValue(entityArgument);
             var requiredRelations = ExtractRequiredRelations(relationsArgument).ToList();
 
-            if (analysisEntity != null && requiredRelations.Any()) {
-                // Check if all required permissions exist in current state using copy-aware logic
-                ValidateRequiredPermissions(analysisEntity, requiredRelations, originalOperation, defaultValue);
+            if (pointsToValue != null && requiredRelations.Any()) {
+                ValidateRequiredPermissions(pointsToValue, requiredRelations, originalOperation, defaultValue);
             }
         } catch {
             // If extraction fails, ignore silently
@@ -165,46 +152,25 @@ internal class SealedFgaDataFlowVisitor(
     }
 
     /// <summary>
-    ///     Extracts an AnalysisEntity from an IOperation, handling both direct operations and argument operations.
+    ///     Extracts a PointsToAbstractValue from an IOperation, unwrapping if required.
     /// </summary>
-    private AnalysisEntity? ExtractAnalysisEntity(IOperation? operation) {
+    private PointsToAbstractValue? ExtractPointsToValue(IOperation? operation) {
         if (operation == null) {
             return null;
         }
 
         // Handle argument operations by extracting the underlying value
         if (operation is IArgumentOperation argument) {
-            return ExtractAnalysisEntity(argument.Value);
+            return ExtractPointsToValue(argument.Value);
         }
 
         // Handle conversion operations by unwrapping to the underlying operand
         if (operation is IConversionOperation conversion) {
-            return ExtractAnalysisEntity(conversion.Operand);
+            return ExtractPointsToValue(conversion.Operand);
         }
 
-        // For now, create analysis entities for operations we can handle
-        if (operation is IParameterReferenceOperation paramRef) {
-            return AnalysisEntity.Create(paramRef.Parameter,
-                ImmutableArray<AbstractIndex>.Empty,
-                paramRef.Parameter.Type,
-                PointsToAbstractValue.Unknown,
-                null,
-                null
-            );
-        }
-
-        if (operation is ILocalReferenceOperation localRef) {
-            return AnalysisEntity.Create(localRef.Local,
-                ImmutableArray<AbstractIndex>.Empty,
-                localRef.Local.Type,
-                PointsToAbstractValue.Unknown,
-                null,
-                null
-            );
-        }
-
-        // For other operations, return null for now
-        return null;
+        var result = pointsToAnalysisResult[operation];
+        return result;
     }
 
     /// <summary>
@@ -265,16 +231,16 @@ internal class SealedFgaDataFlowVisitor(
     /// </summary>
     private GlobalFlowStateAnalysisValueSet CreateValueWithPermission(
         GlobalFlowStateAnalysisValueSet currentValue,
-        AnalysisEntity analysisEntity,
+        PointsToAbstractValue pointsToValue,
         string relation
     ) {
-        // Get the current SealedFgaDataFlowValue or create a new one
         var currentDataFlowValue = GetOrCreateDataFlowValue(currentValue);
 
-        // Add the permission to the authorization state
-        var newDataFlowValue = currentDataFlowValue.WithPermission(analysisEntity, relation);
+        var newDataFlowValue = currentDataFlowValue;
+        foreach (var location in pointsToValue.Locations) {
+            newDataFlowValue = currentDataFlowValue.WithPermission(location, relation);
+        }
 
-        // Return new value set with updated authorization state
         return ValueSetFactory.Create(newDataFlowValue);
     }
 
@@ -282,7 +248,7 @@ internal class SealedFgaDataFlowVisitor(
     ///     Validates that required permissions exist in the current state using copy-aware logic.
     /// </summary>
     private void ValidateRequiredPermissions(
-        AnalysisEntity analysisEntity,
+        PointsToAbstractValue pointsToValue,
         IEnumerable<string> requiredRelations,
         IOperation originalOperation,
         GlobalFlowStateAnalysisValueSet currentValue
@@ -291,8 +257,11 @@ internal class SealedFgaDataFlowVisitor(
         var requiredRelationsList = requiredRelations.ToList();
 
         // Check permissions using copy-aware logic
-        var missingPermissions =
-            GetMissingPermissionsCopyAware(analysisEntity, requiredRelationsList, currentDataFlowValue).ToList();
+        var missingPermissions = GetMissingPermissionsCopyAware(
+            pointsToValue,
+            requiredRelationsList,
+            currentDataFlowValue
+        ).ToList();
 
         // Report diagnostic for missing authorization
         if (missingPermissions.Any()) {
@@ -300,7 +269,7 @@ internal class SealedFgaDataFlowVisitor(
                 Diagnostic.Create(
                     SealedFgaDiagnosticRules.MissingAuthorizationRule,
                     originalOperation.Syntax.GetLocation(),
-                    analysisEntity.ToString(),
+                    pointsToValue.ToString(),
                     string.Join(", ", missingPermissions)
                 )
             );
@@ -325,17 +294,23 @@ internal class SealedFgaDataFlowVisitor(
     }
 
     /// <summary>
-    ///     Gets missing permissions using copy-aware logic from Microsoft's CopyAnalysis.
-    ///     For now, we fall back to direct entity check until proper CopyAnalysis integration is complete.
+    ///     Gets missing permissions using copy-aware logic from Microsoft's PointsToAnalysis.
     /// </summary>
-    private IEnumerable<string> GetMissingPermissionsCopyAware(
-        AnalysisEntity analysisEntity,
-        IEnumerable<string> requiredRelations,
+    private static IEnumerable<string> GetMissingPermissionsCopyAware(
+        PointsToAbstractValue pointsToValue,
+        IReadOnlyCollection<string> requiredRelations,
         SealedFgaDataFlowValue currentDataFlowValue
     ) {
-        // TODO: Implement proper CopyAnalysis integration
-        // For now, fall back to direct entity check
-        return currentDataFlowValue.GetMissingPermissions(analysisEntity, requiredRelations);
+        if (pointsToValue.Kind != PointsToAbstractValueKind.KnownLocations) {
+            // TODO: Maybe show diagnostic warning
+            return [];
+        }
+
+        // Union permissions from all locations the value points to
+        var allCheckedPermissions = currentDataFlowValue.AuthorizationState.GetPermissionIntersect(
+            pointsToValue.Locations
+        );
+        return allCheckedPermissions.GetMissingPermissions(requiredRelations);
     }
 
     /// <summary>
@@ -370,8 +345,8 @@ internal class SealedFgaDataFlowVisitor(
     private bool InheritsFromDbContext(ITypeSymbol typeSymbol) {
         var baseType = typeSymbol.BaseType;
         while (baseType != null) {
-            if (baseType.Name == nameof(DbContext) &&
-                baseType.ContainingNamespace.FullName() == typeof(DbContext).Namespace) {
+            if (baseType.Name == "DbContext" &&
+                baseType.ContainingNamespace.FullName() == "Microsoft.EntityFrameworkCore") {
                 return true;
             }
 
