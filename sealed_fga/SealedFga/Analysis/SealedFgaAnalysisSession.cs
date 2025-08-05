@@ -187,14 +187,13 @@ public class SealedFgaAnalysisSession(
                     ctx,
                     interfaceRedirects,
                     initialAuthorizationState,
-                    context,
-                    pointsToAnalysisResult
+                    context
                 ),
                 wellKnownTypeProvider,
                 context.Options,
                 SealedFgaDiagnosticRules.FoundContextRule,
-                false, // performValueContentAnalysis
-                false, // pessimisticAnalysis
+                true, // Needs to be true; if false, the PointsTo analysis will always be run pessimistic
+                false, // Needs to be true, else we pretty much only receive unknown locations
                 out _,
                 InterproceduralAnalysisKind.ContextSensitive
             );

@@ -15,8 +15,7 @@ internal class SealedFgaDataFlowVisitor(
     GlobalFlowStateAnalysisContext analysisContext,
     Dictionary<INamedTypeSymbol, INamedTypeSymbol> interfaceRedirects,
     SealedFgaDataFlowValue initialAuthorizationState,
-    CompilationAnalysisContext diagnosticContext,
-    PointsToAnalysisResult pointsToAnalysisResult
+    CompilationAnalysisContext diagnosticContext
 ) : GlobalFlowStateValueSetFlowOperationVisitor(analysisContext, true) {
     /// <summary>
     ///     Visits a method invocation.
@@ -31,17 +30,17 @@ internal class SealedFgaDataFlowVisitor(
         IOperation originalOperation,
         GlobalFlowStateAnalysisValueSet defaultValue
     ) {
+        method = HandleDependencyInjection(method);
+
         if (visitedInstance != null) {
             DetectContextMethodCall(method, visitedInstance, originalOperation);
         }
 
-        // Handle authorization method calls
         var updatedValue = HandleAuthorizationMethodCall(method, visitedArguments, originalOperation, defaultValue);
         if (updatedValue != null) {
             return updatedValue;
         }
 
-        method = HandleDependencyInjection(method);
         return base.VisitInvocation_NonLambdaOrDelegateOrLocalFunction(
             method,
             visitedInstance,
@@ -169,7 +168,7 @@ internal class SealedFgaDataFlowVisitor(
             return ExtractPointsToValue(conversion.Operand);
         }
 
-        var result = pointsToAnalysisResult[operation];
+        var result = GetPointsToAbstractValue(operation);
         return result;
     }
 

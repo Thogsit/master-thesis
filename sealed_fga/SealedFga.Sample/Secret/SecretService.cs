@@ -10,7 +10,7 @@ public class SecretService(SealedFgaSampleContext context) : ISecretService {
         => await context.SecretEntities.ToListAsync();
 
     public async Task<SecretEntity?> GetSecretByIdAsync(SecretEntityId secretId) {
-        SealedFgaGuard.RequireCheck(secretId, SecretEntityIdAttributes.can_edit);
+        SealedFgaGuard.RequireCheck(secretId, SecretEntityIdAttributes.can_view, SecretEntityIdAttributes.can_edit);
         return await context.SecretEntities.FindAsync(secretId);
     }
 }
