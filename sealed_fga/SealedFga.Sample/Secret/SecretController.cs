@@ -59,9 +59,9 @@ public class SecretController(
         // Create a copy; should receive all checked permissions
         var newId = secretId;
 
-        //SealedFgaGuard.RequireCheck(newId, SecretEntityIdAttributes.can_view, SecretEntityIdAttributes.can_edit);
-        //SealedFgaGuard.RequireCheck(secret, SecretEntityIdAttributes.can_edit);
-        //SealedFgaGuard.RequireCheck(secretId, SecretEntityIdAttributes.can_edit, SecretEntityIdAttributes.can_view);
+        SealedFgaGuard.RequireCheck(newId, SecretEntityIdAttributes.can_view, SecretEntityIdAttributes.can_edit);
+        SealedFgaGuard.RequireCheck(secret, SecretEntityIdAttributes.can_edit);
+        SealedFgaGuard.RequireCheck(secretId, SecretEntityIdAttributes.can_edit, SecretEntityIdAttributes.can_view);
 
         secret.OwningAgencyId = newAgency.Id;
         await context.SaveChangesAsync();

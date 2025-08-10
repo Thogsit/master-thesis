@@ -17,10 +17,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.3.0" />
+    <!--
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    -->
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.6" PrivateAssets="all" GeneratePathProperty="true" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
     <PackageReference Include="TickerQ" Version="2.2.2" PrivateAssets="all" />
@@ -36,10 +38,15 @@
     <Reference Include="Microsoft.CodeAnalysis.AnalyzerUtilities">
       <HintPath>..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll</HintPath>
     </Reference>
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.0" GeneratePathProperty="true" />
+    <!--
+    <Reference Include="Microsoft.CodeAnalysis.NetAnalyzers">
+      <HintPath>..\..\Microsoft.CodeAnalysis.NetAnalyzers.dll</HintPath>
+    </Reference>
+    -->
     <!-- Or THIS for the real library
     <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" PrivateAssets="all" />
     -->
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.0" GeneratePathProperty="true" />
   </ItemGroup>
 
   <!-- This is needed to ensure that the analyzer DLLs are included in the NuGet package.
@@ -49,8 +56,8 @@
     <None Include="$(OutputPath)\OpenFga.Language.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="$(PkgSystem_Collections_Immutable)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="$(PkgMicrosoft_Data_Sqlite)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <None Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <!--
+    <None Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" PrivateAssets="all" ExcludeAssets="all" GeneratePathProperty="true" />
     <None Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     -->

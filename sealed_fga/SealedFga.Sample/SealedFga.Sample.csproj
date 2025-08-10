@@ -30,10 +30,18 @@
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" OutputItemType="Analyzer" Version="4.13.1" />
     <Analyzer Include="..\SealedFga\bin\Debug\netstandard2.0\OpenFga.Language.dll" />
-    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
-    <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.6" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_Data_Sqlite)\lib\netstandard2.0\*.dll" />
+    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" />
+    <!--
+    <Reference Include="Microsoft.CodeAnalysis.NetAnalyzers">
+      <HintPath>..\..\Microsoft.CodeAnalysis.NetAnalyzers.dll</HintPath>
+    </Reference>
+    <Analyzer Include="..\..\Microsoft.CodeAnalysis.NetAnalyzers.dll" />
+    -->
+    <!--
+    -->
 
     <PackageReference Include="TickerQ" Version="2.2.2" />
     <PackageReference Include="TickerQ.EntityFrameworkCore" Version="2.2.2" />

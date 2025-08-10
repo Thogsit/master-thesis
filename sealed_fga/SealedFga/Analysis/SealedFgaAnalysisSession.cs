@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -5,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Analyzer.Utilities;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis;
@@ -23,8 +25,6 @@ public class SealedFgaAnalysisSession(
     INamedTypeSymbol fgaAuthorizeListAttributeSymbol,
     ImmutableHashSet<INamedTypeSymbol> httpEndpointAttributeSymbols
 ) {
-    private readonly ConcurrentBag<HttpEndpointAnalysisContext> _httpEndpointMethodContexts = [];
-
     private readonly ConcurrentDictionary<INamedTypeSymbol, AttributeData> _implByAttrByInterface
         = new(SymbolEqualityComparer.Default);
 
@@ -42,8 +42,7 @@ public class SealedFgaAnalysisSession(
 
         // Parse all interfaces with our "ImplementedBy" attribute
         foreach (var interfaceDeclarationSyntax in root.DescendantNodes().OfType<InterfaceDeclarationSyntax>()) {
-            var interfaceSymbol =
-                (INamedTypeSymbol?) context.SemanticModel.GetDeclaredSymbol(interfaceDeclarationSyntax);
+            var interfaceSymbol = context.SemanticModel.GetDeclaredSymbol(interfaceDeclarationSyntax);
 
             if (interfaceSymbol is null) {
                 continue;
@@ -62,7 +61,8 @@ public class SealedFgaAnalysisSession(
 
         // Iterate over all classes and count how many implement each interface that we're tracking
         foreach (var classDeclarationSyntax in root.DescendantNodes().OfType<ClassDeclarationSyntax>()) {
-            var classSymbol = (INamedTypeSymbol?) context.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax);
+            var classSymbol =
+                (INamedTypeSymbol?) ModelExtensions.GetDeclaredSymbol(context.SemanticModel, classDeclarationSyntax);
 
             if (classSymbol is null) {
                 continue;
@@ -74,35 +74,6 @@ public class SealedFgaAnalysisSession(
                 }
             }
         }
-
-        // Parse all http endpoints for later analysis
-        foreach (var methodDeclarationSyntax in root.DescendantNodes().OfType<MethodDeclarationSyntax>()) {
-            var methodDeclarationSymbol =
-                (IMethodSymbol?) context.SemanticModel.GetDeclaredSymbol(methodDeclarationSyntax);
-            if (methodDeclarationSymbol is null) {
-                continue;
-            }
-
-            // We don't need to analyze methods that are not the direct entry points
-            if (methodDeclarationSymbol.IsAbstract) {
-                continue;
-            }
-
-            // Skip non-HTTP methods
-            if (!methodDeclarationSymbol.GetAttributes().Any(attr =>
-                    attr.AttributeClass is not null && httpEndpointAttributeSymbols.Contains(attr.AttributeClass)
-                )) {
-                continue;
-            }
-
-            _httpEndpointMethodContexts.Add(
-                new HttpEndpointAnalysisContext(
-                    methodDeclarationSymbol,
-                    methodDeclarationSyntax,
-                    context.SemanticModel
-                )
-            );
-        }
     }
 
     /// <summary>
@@ -113,7 +84,82 @@ public class SealedFgaAnalysisSession(
     /// </summary>
     /// <param name="context">The compilation analysis context.</param>
     public void OnCompilationEndRunAnalysis(CompilationAnalysisContext context) {
-        var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(context.Compilation);
+        var diagnosticsReporter = new DepInjectionAwareDiagnosticsReporter(context);
+
+        // Build interface redirects
+        var interfaceRedirects = new Dictionary<ITypeSymbol, INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        foreach (var (interfaceSymbol, implByAttr) in _implByAttrByInterface) {
+            if (implByAttr.ConstructorArguments[0].Value is not INamedTypeSymbol implementingClassSymbol) {
+                continue;
+            }
+
+            interfaceRedirects.Add(interfaceSymbol, implementingClassSymbol.OriginalDefinition);
+        }
+
+        // Rewrite the syntax trees to resolve dependency injection
+        var dependencyInjectedSyntaxTrees = new List<SyntaxTree>();
+        foreach (var syntaxTree in context.Compilation.SyntaxTrees) {
+            var sourceLocationMapper = new SourceLocationMapper();
+            var depInjectedSyntaxRoot = new DepInjectionSyntaxRewriter(
+                    interfaceRedirects,
+                    sourceLocationMapper,
+                    context.Compilation.GetSemanticModel(syntaxTree)
+                )
+               .Visit(syntaxTree.GetRoot());
+            dependencyInjectedSyntaxTrees.Add(
+                syntaxTree.WithRootAndOptions(depInjectedSyntaxRoot, syntaxTree.Options)
+            );
+            diagnosticsReporter.AddFile(
+                syntaxTree.FilePath,
+                new DepInjectionAwareDiagnosticsReporter.LocationMapData {
+                    LocationMapper = sourceLocationMapper,
+                    OldSyntaxTree = syntaxTree,
+                }
+            );
+        }
+
+        // (Re-)compile all syntax trees incl. the newly modified ones
+        var compilation = CSharpCompilation.Create(
+            Guid.NewGuid().ToString(),
+            dependencyInjectedSyntaxTrees,
+            context.Compilation.References
+        );
+        var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilation);
+
+        // Now analyze the modified syntax trees one by one
+        var httpEndpointMethodContexts = new List<HttpEndpointAnalysisContext>();
+        foreach (var syntaxTree in compilation.SyntaxTrees) {
+            var root = syntaxTree.GetRoot();
+            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+
+            // Parse all http endpoints for later analysis
+            foreach (var methodDeclarationSyntax in root.DescendantNodes().OfType<MethodDeclarationSyntax>()) {
+                var methodDeclarationSymbol = semanticModel.GetDeclaredSymbol(methodDeclarationSyntax);
+                if (methodDeclarationSymbol is null) {
+                    continue;
+                }
+
+                // We don't need to analyze methods that are not the direct entry points
+                if (methodDeclarationSymbol.IsAbstract) {
+                    continue;
+                }
+
+                // Skip non-HTTP methods
+                if (!methodDeclarationSymbol.GetAttributes().Any(attr =>
+                        attr.AttributeClass is not null && httpEndpointAttributeSymbols.Contains(attr.AttributeClass)
+                    )) {
+                    continue;
+                }
+
+                httpEndpointMethodContexts.Add(
+                    new HttpEndpointAnalysisContext(
+                        methodDeclarationSymbol,
+                        methodDeclarationSyntax,
+                        semanticModel
+                    )
+                );
+            }
+        }
 
         // Every interface that has exactly one implementing class could possibly miss the "ImplementedBy" attribute
         foreach (var (interfaceSymbol, implCount) in _implementerCountByInterface) {
@@ -132,16 +178,8 @@ public class SealedFgaAnalysisSession(
             }
         }
 
-        // Build Dependency Injection map
-        var interfaceRedirects = new Dictionary<INamedTypeSymbol, INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        foreach (var (interfaceSymbol, implByAttr) in _implByAttrByInterface) {
-            if (implByAttr.ConstructorArguments[0].Value is not INamedTypeSymbol implementingClassSymbol) continue;
-
-            interfaceRedirects.Add(interfaceSymbol, implementingClassSymbol.OriginalDefinition);
-        }
-
         // Analyze all http endpoints
-        foreach (var httpEndpointMethodContext in _httpEndpointMethodContexts) {
+        foreach (var httpEndpointMethodContext in httpEndpointMethodContexts) {
             var cfg = ControlFlowGraph.Create(
                 httpEndpointMethodContext.MethodSyntax,
                 httpEndpointMethodContext.MethodSemanticModel
@@ -155,7 +193,7 @@ public class SealedFgaAnalysisSession(
                 context.Options,
                 SealedFgaDiagnosticRules.MissingAuthorizationRule,
                 cfg,
-                context.Compilation,
+                httpEndpointMethodContext.MethodSemanticModel.Compilation,
                 InterproceduralAnalysisKind.ContextSensitive,
                 defaultMaxInterproceduralMethodCallChain: 4
             );
@@ -185,9 +223,8 @@ public class SealedFgaAnalysisSession(
                 httpEndpointMethodContext.MethodSymbol,
                 ctx => new SealedFgaDataFlowVisitor(
                     ctx,
-                    interfaceRedirects,
                     initialAuthorizationState,
-                    context
+                    diagnosticsReporter
                 ),
                 wellKnownTypeProvider,
                 context.Options,

@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.GlobalFlowStateAnalysis;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis;
 using Microsoft.CodeAnalysis.Operations;
@@ -13,13 +12,11 @@ namespace SealedFga.Analysis;
 
 internal class SealedFgaDataFlowVisitor(
     GlobalFlowStateAnalysisContext analysisContext,
-    Dictionary<INamedTypeSymbol, INamedTypeSymbol> interfaceRedirects,
     SealedFgaDataFlowValue initialAuthorizationState,
-    CompilationAnalysisContext diagnosticContext
+    DepInjectionAwareDiagnosticsReporter diagnosticsReporter
 ) : GlobalFlowStateValueSetFlowOperationVisitor(analysisContext, true) {
     /// <summary>
     ///     Visits a method invocation.
-    ///     Overriden to replace the target method if necessary to imitate dependency injection.
     ///     Identifies DB context accesses and handles authorization checks.
     /// </summary>
     public override GlobalFlowStateAnalysisValueSet VisitInvocation_NonLambdaOrDelegateOrLocalFunction(
@@ -30,8 +27,6 @@ internal class SealedFgaDataFlowVisitor(
         IOperation originalOperation,
         GlobalFlowStateAnalysisValueSet defaultValue
     ) {
-        method = HandleDependencyInjection(method);
-
         if (visitedInstance != null) {
             DetectContextMethodCall(method, visitedInstance, originalOperation);
         }
@@ -146,7 +141,6 @@ internal class SealedFgaDataFlowVisitor(
             // If extraction fails, ignore silently
         }
 
-        // RequireCheck doesn't modify the authorization state, just validates it
         return defaultValue;
     }
 
@@ -189,7 +183,7 @@ internal class SealedFgaDataFlowVisitor(
         }
 
         // Handle literal values
-        if (valueOperation is ILiteralOperation literal && literal.ConstantValue.HasValue) {
+        if (valueOperation is ILiteralOperation { ConstantValue.HasValue: true } literal) {
             return literal.ConstantValue.Value?.ToString();
         }
 
@@ -264,13 +258,11 @@ internal class SealedFgaDataFlowVisitor(
 
         // Report diagnostic for missing authorization
         if (missingPermissions.Any()) {
-            diagnosticContext.ReportDiagnostic(
-                Diagnostic.Create(
-                    SealedFgaDiagnosticRules.MissingAuthorizationRule,
-                    originalOperation.Syntax.GetLocation(),
-                    pointsToValue.ToString(),
-                    string.Join(", ", missingPermissions)
-                )
+            diagnosticsReporter.ReportDiagnostic(
+                SealedFgaDiagnosticRules.MissingAuthorizationRule,
+                originalOperation.Syntax.GetLocation(),
+                pointsToValue.ToString(),
+                string.Join(", ", missingPermissions)
             );
         }
     }
@@ -312,31 +304,13 @@ internal class SealedFgaDataFlowVisitor(
         return allCheckedPermissions.GetMissingPermissions(requiredRelations);
     }
 
-    /// <summary>
-    ///     Handles dependency injection by replacing the interface with the implementing class on method invocations.
-    ///     If the target method is not called on an interface or no implementing class is known, returns the input method.
-    /// </summary>
-    /// <param name="method">Target method.</param>
-    /// <returns>Replaced method or same if no replacement is known.</returns>
-    private IMethodSymbol HandleDependencyInjection(IMethodSymbol method) {
-        method = method.OriginalDefinition;
-        interfaceRedirects.TryGetValue(method.ContainingType, out var implementingClassSymbol);
-        if (implementingClassSymbol is null) {
-            return method;
-        }
-
-        return (implementingClassSymbol.FindImplementationForInterfaceMember(method) as IMethodSymbol)!;
-    }
-
     private void DetectContextMethodCall(IMethodSymbol method, IOperation instance, IOperation originalOperation) {
         var instanceType = instance.Type;
         if (instanceType is INamedTypeSymbol namedType && InheritsFromDbContext(namedType)) {
-            diagnosticContext.ReportDiagnostic(
-                Diagnostic.Create(
-                    SealedFgaDiagnosticRules.FoundContextRule,
-                    originalOperation.Syntax.GetLocation(),
-                    $"Found DbContext method call: {method.Name} on {namedType.Name}"
-                )
+            diagnosticsReporter.ReportDiagnostic(
+                SealedFgaDiagnosticRules.FoundContextRule,
+                originalOperation.Syntax.GetLocation(),
+                $"Found DbContext method call: {method.Name} on {namedType.Name}"
             );
         }
     }
