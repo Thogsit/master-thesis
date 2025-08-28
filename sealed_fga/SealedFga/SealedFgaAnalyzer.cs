@@ -30,6 +30,9 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer {
                 var fgaAuthorizeListAttributeSymbol = compilationStartContext.Compilation.GetTypeByMetadataName(
                     typeof(FgaAuthorizeListAttribute).FullName!
                 )!;
+                var sealedFgaGuardSymbol = compilationStartContext.Compilation.GetTypeByMetadataName(
+                    typeof(SealedFgaGuard).FullName!
+                );
                 var httpEndpointAttributes =
                     Settings.HttpEndpointAttributeFullNames.Select(name =>
                                  compilationStartContext.Compilation.GetTypeByMetadataName(name)!
@@ -41,6 +44,7 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer {
                     implementedByAttributeSymbol,
                     fgaAuthorizeAttributeSymbol,
                     fgaAuthorizeListAttributeSymbol,
+                    sealedFgaGuardSymbol,
                     httpEndpointAttributes
                 );
                 compilationStartContext.RegisterSemanticModelAction(analysisSession.OnSemanticModelDataGathering);

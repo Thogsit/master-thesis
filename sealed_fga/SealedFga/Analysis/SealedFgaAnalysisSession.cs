@@ -23,6 +23,7 @@ public class SealedFgaAnalysisSession(
     INamedTypeSymbol implementedByAttributeSymbol,
     INamedTypeSymbol fgaAuthorizeAttributeSymbol,
     INamedTypeSymbol fgaAuthorizeListAttributeSymbol,
+    INamedTypeSymbol sealedFgaGuardSymbol,
     ImmutableHashSet<INamedTypeSymbol> httpEndpointAttributeSymbols
 ) {
     private readonly ConcurrentDictionary<INamedTypeSymbol, AttributeData> _implByAttrByInterface
@@ -128,6 +129,7 @@ public class SealedFgaAnalysisSession(
 
         // Now analyze the modified syntax trees one by one
         var httpEndpointMethodContexts = new List<HttpEndpointAnalysisContext>();
+        var requireCheckCalls = new List<RequireCheckAnalysisContext>();
         foreach (var syntaxTree in compilation.SyntaxTrees) {
             var root = syntaxTree.GetRoot();
             var semanticModel = compilation.GetSemanticModel(syntaxTree);
@@ -159,6 +161,28 @@ public class SealedFgaAnalysisSession(
                     )
                 );
             }
+
+            // Parse all RequireCheck calls for later analysis
+            var requireCheckMethodSymbols = sealedFgaGuardSymbol.GetMembers().OfType<IMethodSymbol>().ToList();
+            foreach (var invocationSyntax in root.DescendantNodes().OfType<InvocationExpressionSyntax>()) {
+                var methodSymbol = semanticModel.GetSymbolInfo(invocationSyntax).Symbol;
+                if (methodSymbol is null ||
+                    !requireCheckMethodSymbols.Contains(methodSymbol, SymbolEqualityComparer.Default)) {
+                    continue;
+                }
+
+                requireCheckCalls.Add(
+                    new RequireCheckAnalysisContext(
+                        semanticModel.GetDeclaredSymbol(
+                            invocationSyntax.Ancestors()
+                                            .OfType<MethodDeclarationSyntax>()
+                                            .First()
+                        )!,
+                        invocationSyntax,
+                        semanticModel
+                    )
+                );
+            }
         }
 
         // Every interface that has exactly one implementing class could possibly miss the "ImplementedBy" attribute
@@ -176,6 +200,18 @@ public class SealedFgaAnalysisSession(
                     )
                 );
             }
+        }
+
+        // Analyze all require check calls
+        foreach (var requireCheckCallContext in requireCheckCalls) {
+            var cfg = ControlFlowGraph.Create(
+                requireCheckCallContext.RequireCheckSyntax,
+                requireCheckCallContext.SemanticModel
+            );
+
+            if (cfg == null) continue;
+
+            // TODO: Add analysis here
         }
 
         // Analyze all http endpoints
