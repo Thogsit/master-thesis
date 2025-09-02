@@ -6,6 +6,8 @@ namespace SealedFga.Generators.AuthModel;
 
 public static class TypeNameIdGenerator {
     public const string ParseMethodName = "Parse";
+    public const string OpenFgaIdTupleStringMethodName = "AsOpenFgaIdTupleString";
+    public const string OpenFgaTypeNamePropertyName = "OpenFgaTypeName";
 
     public static GeneratedFile Generate(IdClassToGenerateData idClassToGenerate)
         => new(
@@ -31,7 +33,7 @@ public static class TypeNameIdGenerator {
                   }
 
                   /// <inheritdoc />
-                  public static string OpenFgaTypeName => "{{idClassToGenerate.TypeName}}";
+                  public static string {{OpenFgaTypeNamePropertyName}} => "{{idClassToGenerate.TypeName}}";
 
                   /// <summary>
                   ///     Creates a new instance of <see cref="{{idClassToGenerate.ClassName}}"/> with a generated value.
@@ -48,7 +50,7 @@ public static class TypeNameIdGenerator {
                   }
 
                   /// <inheritdoc />
-                  public string AsOpenFgaIdTupleString()
+                  public string {{OpenFgaIdTupleStringMethodName}}()
                       => $"{OpenFgaTypeName}:{ToString()}";
 
                   /// <inheritdoc />

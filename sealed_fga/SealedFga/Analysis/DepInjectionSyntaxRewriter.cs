@@ -10,7 +10,7 @@ public class DepInjectionSyntaxRewriter(
     Dictionary<ITypeSymbol, INamedTypeSymbol> interfaceRedirects,
     SourceLocationMapper locationMapper,
     SemanticModel semanticModel
-    ) : CSharpSyntaxRewriter {
+) : CSharpSyntaxRewriter {
     public override SyntaxNode? VisitParameter(ParameterSyntax node) {
         // Only analyze primary class constructor parameters for now
         // TODO: We will want to support normal constructors and possibly other kinds of parameters in the future!
@@ -36,7 +36,7 @@ public class DepInjectionSyntaxRewriter(
         var currentNameSyntax = SyntaxFactory.ParseName(qualifiedName);
 
         return currentNameSyntax
-                           .WithLeadingTrivia(originalType.GetLeadingTrivia())
-                           .WithTrailingTrivia(originalType.GetTrailingTrivia());
+              .WithLeadingTrivia(originalType.GetLeadingTrivia())
+              .WithTrailingTrivia(originalType.GetTrailingTrivia());
     }
 }

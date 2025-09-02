@@ -267,7 +267,10 @@ public sealed class AuthorizationLattice : IEquatable<AuthorizationLattice> {
     ///     Calculates the intersection of permissions across a collection of locations.
     /// </summary>
     /// <param name="locations">The collection of locations for which to calculate the intersected permissions.</param>
-    /// <returns>The intersected <see cref="PermissionSet"/> of all provided locations, or an empty set if no permissions are available.</returns>
+    /// <returns>
+    ///     The intersected <see cref="PermissionSet" /> of all provided locations, or an empty set if no permissions are
+    ///     available.
+    /// </returns>
     public PermissionSet GetPermissionIntersect(IEnumerable<AbstractLocation> locations) {
         PermissionSet? permissionsIntersect = null;
         foreach (var location in locations) {
@@ -284,7 +287,7 @@ public sealed class AuthorizationLattice : IEquatable<AuthorizationLattice> {
     /// </summary>
     /// <param name="location">The location for which to retrieve permissions.</param>
     /// <returns>
-    ///     A <see cref="PermissionSet"/> containing the permissions associated with the given location,
+    ///     A <see cref="PermissionSet" /> containing the permissions associated with the given location,
     ///     or an empty set if no permissions are found.
     /// </returns>
     public PermissionSet GetPermissionsOrEmpty(AbstractLocation location)

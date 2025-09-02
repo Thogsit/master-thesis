@@ -8,14 +8,6 @@ namespace SealedFga.Analysis;
 public class SourceLocationMapper {
     private readonly List<LocationMapping> _mappings = [];
 
-    public struct LocationMapping {
-        public int OriginalStart;
-        public int OriginalEnd;
-        public int TransformedStart;
-        public int TransformedEnd;
-        public int OffsetDelta;
-    }
-
     public void AddMapping(int originalStart, int originalLength, int newLength) {
         var cumulativeOffset = GetCumulativeOffset(originalStart);
 
@@ -61,5 +53,13 @@ public class SourceLocationMapper {
             transformedLocation.SourceTree!,
             new TextSpan(originalPosition, transformedLocation.SourceSpan.Length)
         );
+    }
+
+    public struct LocationMapping {
+        public int OriginalStart;
+        public int OriginalEnd;
+        public int TransformedStart;
+        public int TransformedEnd;
+        public int OffsetDelta;
     }
 }

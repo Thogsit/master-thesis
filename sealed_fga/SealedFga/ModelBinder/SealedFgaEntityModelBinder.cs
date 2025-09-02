@@ -4,7 +4,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
+using OpenFga.Sdk.Model;
 using SealedFga.Attributes;
+using SealedFga.Exceptions;
+using SealedFga.Fga;
 using SealedFga.Generators.AuthModel;
 using SealedFga.Util;
 
@@ -33,10 +36,16 @@ public class SealedFgaEntityModelBinder(Type dbContextType)
     /// </example>
     /// <param name="context">The model binding context.</param>
     /// <param name="param">The annotated parameter.</param>
+    /// <param name="sealedFgaService">The SealedFGA service.</param>
+    /// <param name="openFgaRawUserString">
+    ///     The raw OpenFGA user string from the HttpContext's User ClaimsPrincipal.
+    /// </param>
     /// <param name="attr">The parameter's annotation.</param>
     protected override async Task FgaBind(
         ModelBindingContext context,
         ControllerParameterDescriptor param,
+        SealedFgaService sealedFgaService,
+        string openFgaRawUserString,
         FgaAuthorizeAttribute attr
     ) {
         // Get the value of the parameter specified in ParameterName, e.g. "15ff5687-3f4d-4cae-8a19-68670e5cdff2"
@@ -67,6 +76,27 @@ public class SealedFgaEntityModelBinder(Type dbContextType)
 
         var parsedId = IdUtil.ParseId(idType.ParameterInfo.ParameterType, parameterVal);
 
+        // Retrieve the OpenFGA ID tuple string from the ID object, e.g. SecretEntityId(...) -> "secret:15ff5687-3f4d-4cae-8a19-68670e5cdff2"
+        var openFgaIdTupleStringMethod =
+            idType.ParameterInfo.ParameterType.GetMethod(TypeNameIdGenerator.OpenFgaIdTupleStringMethodName);
+        var openFgaRawObjectString = (string?) openFgaIdTupleStringMethod?.Invoke(parsedId, null);
+        if (openFgaRawObjectString == null) {
+            return;
+        }
+
+        // Check if the user has the required permission
+        var isAuthorized = await sealedFgaService.CheckAsync(
+            new TupleKey {
+                User = openFgaRawUserString,
+                Relation = attr.Relation,
+                Object = openFgaRawObjectString,
+            }
+        );
+
+        if (!isAuthorized) {
+            throw new FgaAuthorizationException(openFgaRawObjectString);
+        }
+
         // Find Set<T>().FindAsync method using reflection
         var dbContext = GetDbContext(context);
         var entityType = context.ModelType;
@@ -94,6 +124,8 @@ public class SealedFgaEntityModelBinder(Type dbContextType)
 
             if (entity != null) {
                 context.Result = ModelBindingResult.Success(entity);
+            } else {
+                throw new FgaEntityNotFoundException(context.ModelType, parsedId);
             }
         } else {
             // Fallback: use reflection to get the Result property directly
@@ -102,6 +134,8 @@ public class SealedFgaEntityModelBinder(Type dbContextType)
                 var entity = resultProperty.GetValue(findTask);
                 if (entity != null) {
                     context.Result = ModelBindingResult.Success(entity);
+                } else {
+                    throw new FgaEntityNotFoundException(context.ModelType, parsedId);
                 }
             }
         }

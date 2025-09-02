@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using SealedFga.Sample.Database;
 
 namespace SealedFga.Sample.Secret;

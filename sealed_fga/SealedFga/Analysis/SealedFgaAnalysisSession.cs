@@ -231,7 +231,7 @@ public class SealedFgaAnalysisSession(
                 cfg,
                 httpEndpointMethodContext.MethodSemanticModel.Compilation,
                 InterproceduralAnalysisKind.ContextSensitive,
-                defaultMaxInterproceduralMethodCallChain: 4
+                4
             );
             var pointsToAnalysisResult = PointsToAnalysis.TryGetOrComputeResult(
                 cfg,
@@ -241,8 +241,8 @@ public class SealedFgaAnalysisSession(
                 PointsToAnalysisKind.Complete,
                 interproceduralAnalysisConfiguration,
                 null, // TODO: Maybe override?
-                pessimisticAnalysis: false, // IMPORTANT; if true, most locations are unknown
-                performCopyAnalysis: false // Seems irrelevant
+                false, // IMPORTANT; if true, most locations are unknown
+                false // Seems irrelevant
             )!;
 
             // Extract auth data from annotated parameters using lattice-based approach
@@ -394,7 +394,7 @@ public class SealedFgaAnalysisSession(
     }
 
     /// <summary>
-    /// Adds a permission to the builder for each specified location.
+    ///     Adds a permission to the builder for each specified location.
     /// </summary>
     /// <param name="builder">The dictionary builder to which permissions are added.</param>
     /// <param name="locations">The collection of abstract locations associated with the permissions.</param>

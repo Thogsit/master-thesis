@@ -23,16 +23,19 @@ SealedFGA is a .NET framework that provides **compile-time OpenFGA integration**
 SealedFGA follows a **security-first design philosophy** that prioritizes catching authorization bugs as early as possible:
 
 **Strong Typing Over Stringly-Typed APIs:**
+
 - Uses generated strongly-typed entity IDs (e.g., `SecretEntityId`) instead of raw `Guid` or `string` values
 - Generated relation classes (e.g., `SecretEntityIdAttributes.can_edit`) prevent typos and mismatched entity-relation combinations
 - Interface-driven design using `ISealedFgaType<TId>` to clearly mark which entities require authorization
 
 **Early Error Detection:**
+
 - **Compile-time model validation**: Invalid `model.fga` files cause build errors
 - **Static analysis foundation**: Built-in Roslyn analyzer infrastructure for detecting authorization gaps
 - **Type system constraints**: Generic constraints prevent incompatible entity/relation usage at compile time
 
 **Developer Experience Focus:**
+
 - **Automatic code generation**: Developers define authorization model once in `model.fga`, everything else is generated
 - **Seamless integration**: Works with existing ASP.NET Core and Entity Framework patterns
 - **IntelliSense support**: Generated types provide full IDE support for discoverability
@@ -42,21 +45,25 @@ SealedFGA follows a **security-first design philosophy** that prioritizes catchi
 SealedFGA provides multiple layers of security:
 
 **Layer 1: Type System Guarantees (Compile-time)**
+
 - Strongly-typed entity IDs prevent ID confusion between different entity types
 - Generic constraints ensure relations can only be used with compatible entities
 - Generated code eliminates possibility of typos in relation names
 
 **Layer 2: Attribute-Based Authorization (Runtime)**
+
 - `[FgaAuthorize]` and `[FgaAuthorizeList]` attributes on controller parameters
 - Custom model binders automatically perform OpenFGA checks and entity retrieval
 - Transparent to developer - authorization happens automatically
 
 **Layer 3: Manual Authorization Guards (Compile-time Verifiable)**
+
 - `SealedFgaGuard.RequireCheck()` methods for explicit authorization declarations
 - Compile to NOPs but provide static analysis targets
 - Additive system - multiple checks accumulate authorization state
 
 **Layer 4: Static Analysis Verification**
+
 - Roslyn analyzer that verifies authorization coverage across all code paths
 - Detects missing authorization before database access
 - Validates that required relations are established before entity property access
@@ -75,7 +82,7 @@ SealedFGA provides multiple layers of security:
 ### Installation
 
 > ⚠️ **Current Installation Method (Evaluation Phase)**
-> 
+>
 > SealedFGA is currently only available as a ProjectReference during the evaluation phase. This is a temporary limitation.
 
 ```xml
@@ -83,7 +90,7 @@ SealedFGA provides multiple layers of security:
 ```
 
 > 🔮 **Future Installation (Post-Evaluation)**
-> 
+>
 > SealedFGA will be available as a NuGet package:
 > ```bash
 > dotnet add package SealedFga
@@ -134,7 +141,7 @@ public static class Program {
         // 2. Configure ASP.NET Core with SealedFGA model binders
         builder.Services.AddControllers(options => {
             // REQUIRED: Insert SealedFGA model binder provider
-            options.ModelBinderProviders.Insert(0, 
+            options.ModelBinderProviders.Insert(0,
                 new SealedFgaModelBinderProvider<YourDbContext>());
         });
 
@@ -143,22 +150,22 @@ public static class Program {
             var fgaClient = new OpenFgaClient(new ClientConfiguration {
                 ApiUrl = "http://localhost:8080", // Your OpenFGA server
             });
-            
+
             // Get store ID (first store in this example)
             var storeId = fgaClient.ListStores(null).Result.Stores[0].Id;
             fgaClient.Dispose();
-            
+
             // Recreate client with store ID
             fgaClient = new OpenFgaClient(new ClientConfiguration {
                 ApiUrl = "http://localhost:8080",
                 StoreId = storeId,
             });
-            
+
             // Get authorization model ID (latest model)
             var authModelId = fgaClient.ReadAuthorizationModels().Result
                 .AuthorizationModels[0].Id;
             fgaClient.Dispose();
-            
+
             // Final client configuration
             return new OpenFgaClient(new ClientConfiguration {
                 ApiUrl = "http://localhost:8080",
@@ -244,13 +251,13 @@ public partial class UserEntityId;
 
 // Entity classes
 
-public class DocumentEntity : ISealedFgaType<DocumentEntityId> 
+public class DocumentEntity : ISealedFgaType<DocumentEntityId>
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public DocumentEntityId Id { get; set; } = null!;
     public required string Title { get; set; }
     public required string Content { get; set; }
-    
+
     // IMPORTANT: Use [SealedFgaRelation] for automatic relation updates to the OpenFGA server
     [SealedFgaRelation(nameof(DocumentEntityIdGroups.Owner))]
     public OrganizationEntityId OwnerOrganizationId { get; set; } = null!;
@@ -280,7 +287,7 @@ public class UserEntity : ISealedFgaType<UserEntityId>
 public class MyDbContext : DbContext
 {
     public MyDbContext(DbContextOptions<MyDbContext> options) : base(options) { }
-    
+
     // Only DbSets with ISealedFgaType<TId> entities are considered for authorization
     public DbSet<DocumentEntity> Documents { get; set; }
     public DbSet<OrganizationEntity> Organizations { get; set; }
@@ -293,14 +300,14 @@ public class MyDbContext : DbContext
 ```csharp
 [ApiController]
 [Route("documents")]
-public class DocumentController(MyDbContext context) : ControllerBase 
+public class DocumentController(MyDbContext context) : ControllerBase
 {
     // Automatic authorization + entity retrieval
     [HttpGet("{documentId}")]
     public IActionResult GetDocument(
         [FromRoute] DocumentEntityId documentId,
         [FgaAuthorize(
-            Relation = nameof(DocumentEntityIdAttributes.can_view), 
+            Relation = nameof(DocumentEntityIdAttributes.can_view),
             ParameterName = nameof(documentId)
         )] DocumentEntity document
     ) => Ok(document); // document is already authorized and loaded from the database!
@@ -317,7 +324,7 @@ public class DocumentController(MyDbContext context) : ControllerBase
     public async Task<IActionResult> UpdateDocument(
         [FromRoute] DocumentEntityId documentId,
         [FgaAuthorize(
-            Relation = nameof(DocumentEntityIdAttributes.can_edit), 
+            Relation = nameof(DocumentEntityIdAttributes.can_edit),
             ParameterName = nameof(documentId)
         )] DocumentEntity document,
         [FromBody] UpdateDocumentRequest request
@@ -326,7 +333,7 @@ public class DocumentController(MyDbContext context) : ControllerBase
         document.Content = request.Content;
         document.OwnerOrganizationId = request.Owner;
         await context.SaveChangesAsync(); // Owner relation updates to the OpenFGA service are handled automatically by SealedFGA!
-        
+
         return Ok(document);
     }
 }
@@ -339,9 +346,10 @@ public class DocumentController(MyDbContext context) : ControllerBase
 3. **Test authorization** - Try accessing documents with different user contexts
 
 The attribute-based approach automatically handles:
+
 - Authorization checks against OpenFGA
 - Entity loading from database
-- HTTP 404 responses for non-existent entities  
+- HTTP 404 responses for non-existent entities
 - HTTP 401 responses for unauthorized access
 - Background processing of relation updates
 
@@ -356,22 +364,23 @@ SealedFGA generates strongly-typed ID wrapper classes for each entity type in yo
 public sealed class DocumentEntityId : ISealedFgaTypeId<DocumentEntityId>
 {
     private readonly Guid value;
-    
+
     public DocumentEntityId(Guid value) => this.value = value;
-    
+
     // Conversion methods, equality, etc. are generated automatically
     public static implicit operator DocumentEntityId(Guid value) => new(value);
     public static implicit operator Guid(DocumentEntityId id) => id.value;
-    
+
     // OpenFGA integration methods
     public string AsOpenFgaIdTupleString() => $"document:{value}";
-    
+
     // And more, e.g. JSON and EF Core serialization etc.
     ...
 }
 ```
 
 **Benefits:**
+
 - **Type Safety**: Can't accidentally use `OrganizationEntityId` where `DocumentEntityId` is expected
 - **IntelliSense**: Full IDE support with autocomplete
 - **Refactoring Safety**: Renaming OpenFGA types/relations only needs to be done in a single place, removed/renamed permissions lead to compile-time errors, ...
@@ -388,17 +397,18 @@ public static class DocumentEntityIdAttributes // snake_case relations, especial
     public static readonly SealedFgaRelation<DocumentEntityId> can_edit = new("can_edit");
 }
 
-public static class DocumentEntityIdGroups // uppercase relations/group memberships  
+public static class DocumentEntityIdGroups // uppercase relations/group memberships
 {
     public static readonly SealedFgaRelation<DocumentEntityId> Owner = new("Owner");
 }
 ```
 
 **Usage:**
+
 ```csharp
 // Type-safe relation usage
 await sealedFgaService.CheckAsync(
-    userId, 
+    userId,
     DocumentEntityIdAttributes.can_view,  // Definitely exists in the model.fga file!
     documentId
 );
@@ -412,7 +422,7 @@ The `[SealedFgaRelation]` attribute automatically manages OpenFGA relations when
 public class DocumentEntity : ISealedFgaType<DocumentEntityId>
 {
     // When this property changes, SealedFGA automatically:
-    // 1. Deletes old relation: organization:old_id#member -> document:doc_id#owner  
+    // 1. Deletes old relation: organization:old_id#member -> document:doc_id#owner
     // 2. Creates new relation: organization:new_id#member -> document:doc_id#owner
     [SealedFgaRelation(nameof(DocumentEntityIdGroups.owner))]
     public OrganizationEntityId OwnerOrganizationId { get; set; } = null!;
@@ -431,7 +441,7 @@ await sealedFgaService.QueueWrite(userId, DocumentEntityIdAttributes.can_edit, d
 
 // TickerQ processes the queue with automatic retries:
 // - 1 minute after first failure
-// - 10 minutes after second failure  
+// - 10 minutes after second failure
 // - 1 hour after third failure
 ```
 
@@ -447,7 +457,7 @@ The `SealedFgaService` is the main service for interacting with OpenFGA using st
 // Check if user has relation to object (returns bool)
 Task<bool> CheckAsync<TUserId, TObjId>(
     TUserId user,
-    ISealedFgaRelation<TObjId> relation, 
+    ISealedFgaRelation<TObjId> relation,
     TObjId objectId,
     CancellationToken cancellationToken = default
 );
@@ -456,7 +466,7 @@ Task<bool> CheckAsync<TUserId, TObjId>(
 Task EnsureCheckAsync<TUserId, TObjId>(
     TUserId user,
     ISealedFgaRelation<TObjId> relation,
-    TObjId objectId, 
+    TObjId objectId,
     CancellationToken cancellationToken = default
 );
 
@@ -469,18 +479,19 @@ BatchCheckAsync<TUserId, TObjId>(
 ```
 
 **Example Usage:**
+
 ```csharp
 // Simple check
 var canEdit = await sealedFgaService.CheckAsync(
-    currentUserId, 
-    DocumentEntityIdAttributes.can_edit, 
+    currentUserId,
+    DocumentEntityIdAttributes.can_edit,
     documentId
 );
 
 // Ensure check (throws on failure)
 await sealedFgaService.EnsureCheckAsync(
-    currentUserId, 
-    DocumentEntityIdAttributes.can_view, 
+    currentUserId,
+    DocumentEntityIdAttributes.can_view,
     documentId
 );
 
@@ -508,7 +519,7 @@ Task QueueWrite<TUserId, TObjId>(
 // Queue a delete operation
 Task QueueDelete<TUserId, TObjId>(
     TUserId user,
-    ISealedFgaRelation<TObjId> relation, 
+    ISealedFgaRelation<TObjId> relation,
     TObjId objectId
 );
 
@@ -524,18 +535,19 @@ Task QueueDeletes<TUserId, TObjId>(
 ```
 
 **Example Usage:**
+
 ```csharp
 // Grant edit permission to user
 await sealedFgaService.QueueWrite(
-    userId, 
-    DocumentEntityIdAttributes.can_edit, 
+    userId,
+    DocumentEntityIdAttributes.can_edit,
     documentId
 );
 
 // Revoke view permission
 await sealedFgaService.QueueDelete(
-    userId, 
-    DocumentEntityIdAttributes.can_view, 
+    userId,
+    DocumentEntityIdAttributes.can_view,
     documentId
 );
 
@@ -563,16 +575,17 @@ Task<IEnumerable<TObjId>> ListObjectsAsync<TUserId, TObjId>(
 // Modify all relations containing an old ID to use new ID
 Task ModifyIdAsync<TId>(
     TId oldId,
-    TId newId, 
+    TId newId,
     CancellationToken cancellationToken = default
 ) where TId : ISealedFgaTypeId<TId>;
 ```
 
 **Example Usage:**
+
 ```csharp
 // Get all documents user can view
 var viewableDocumentIds = await sealedFgaService.ListObjectsAsync(
-    currentUserId, 
+    currentUserId,
     DocumentEntityIdAttributes.can_view
 );
 
@@ -592,7 +605,7 @@ Task SafeDeleteTupleAsync(List<TupleKey> tuples, CancellationToken ct = default)
 // Combined safe write and delete operation
 Task SafeWriteAndDeleteTuplesAsync(
     List<TupleKey> writeTuples,
-    List<TupleKey> deleteTuples, 
+    List<TupleKey> deleteTuples,
     CancellationToken ct = default
 );
 ```
@@ -613,25 +626,27 @@ public class FgaAuthorizeAttribute : ModelBinderAttribute
 ```
 
 **Usage:**
+
 ```csharp
 [HttpGet("{documentId}")]
 public IActionResult GetDocument(
     [FromRoute] DocumentEntityId documentId,           // ID parameter
     [FgaAuthorize(
         Relation = nameof(DocumentEntityIdAttributes.can_view),
-        ParameterName = nameof(documentId)             // References ID parameter  
+        ParameterName = nameof(documentId)             // References ID parameter
     )] DocumentEntity document                          // Auto-authorized and database loaded entity
 ) => Ok(document);
 ```
 
 **Behavior:**
+
 - Performs OpenFGA authorization check
 - Loads entity from database if authorized
 - Returns HTTP 404 if entity doesn't exist
 - Returns HTTP 401 if user lacks permission
 - Injects authorized entity into action parameter
 
-#### FgaAuthorizeListAttribute  
+#### FgaAuthorizeListAttribute
 
 Automatically filters and loads multiple entities based on user permissions:
 
@@ -644,6 +659,7 @@ public class FgaAuthorizeListAttribute : ModelBinderAttribute
 ```
 
 **Usage:**
+
 ```csharp
 [HttpGet]
 public IActionResult GetAllDocuments(
@@ -653,6 +669,7 @@ public IActionResult GetAllDocuments(
 ```
 
 **Behavior:**
+
 - Uses OpenFGA ListObjects to get authorized entity IDs
 - Loads only authorized entities from database
 - Returns empty list if user has no permissions
@@ -672,6 +689,7 @@ public class SealedFgaRelationAttribute : Attribute
 ```
 
 **Usage:**
+
 ```csharp
 public class DocumentEntity : ISealedFgaType<DocumentEntityId>
 {
@@ -679,7 +697,7 @@ public class DocumentEntity : ISealedFgaType<DocumentEntityId>
     // organization:new_id#member -> document:this_id#owner
     [SealedFgaRelation(nameof(DocumentEntityIdGroups.owner))]
     public OrganizationEntityId OwnerOrganizationId { get; set; } = null!;
-    
+
     // Can also explicitly specify direction of the relation (is this entity the object or user of the relation)
     [SealedFgaRelation("assigned_user", SealedFgaRelationTargetType.User)]
     public UserEntityId? AssignedUserId { get; set; }
@@ -687,6 +705,7 @@ public class DocumentEntity : ISealedFgaType<DocumentEntityId>
 ```
 
 **Behavior:**
+
 - Automatically queues OpenFGA updates during `SaveChangesAsync()`
 - Deletes old relations and creates new ones when property changes
 - Works with nullable properties (handles null values correctly)
@@ -705,9 +724,10 @@ public class ImplementedByAttribute : Attribute
 ```
 
 **Usage:**
+
 ```csharp
 [ImplementedBy(typeof(DocumentService))]
-public interface IDocumentService  
+public interface IDocumentService
 {
     Task<DocumentEntity> GetDocumentAsync(DocumentEntityId id);
 }
@@ -723,8 +743,9 @@ public class DocumentService : IDocumentService
 ```
 
 **Why This Matters:**
+
 - Static analysis follows interface method calls into concrete implementations
-- Detects missing authorization checks in service layers  
+- Detects missing authorization checks in service layers
 - Provides interprocedural analysis across dependency injection boundaries
 - ⚠️ Without this attribute, static analysis stops at interface boundaries!
 
@@ -733,33 +754,34 @@ public class DocumentService : IDocumentService
 Provides methods for explicit authorization declarations that are analyzed by the static analyzer:
 
 ```csharp
-public static class SealedFgaGuard 
+public static class SealedFgaGuard
 {
     // Declare required permissions for an entity
     public static void RequireCheck<TId, TRel>(
-        ISealedFgaType<TId> entity, 
+        ISealedFgaType<TId> entity,
         params TRel[] relations
     );
-    
+
     // Declare required permissions for an entity ID
     public static void RequireCheck<TId, TRel>(
-        TId entityId, 
-        params TRel[] relations  
+        TId entityId,
+        params TRel[] relations
     );
 }
 ```
 
 **Usage:**
+
 ```csharp
 public async Task<string> GetDocumentContent(DocumentEntityId documentId)
 {
     // Declare to static analyzer: this method requires these permissions
     SealedFgaGuard.RequireCheck(
-        documentId, 
+        documentId,
         DocumentEntityIdAttributes.can_view,
         DocumentEntityIdAttributes.can_read_content
     );
-    
+
     // Static analyzer verifies these permissions are checked before database access
     var document = await dbContext.Documents.FindAsync(documentId);
     return document.Content;
@@ -767,6 +789,7 @@ public async Task<string> GetDocumentContent(DocumentEntityId documentId)
 ```
 
 **Important Notes:**
+
 - **Used by static analyzer** to track required permissions through code paths
 - **Developer responsibility** to place `RequireCheck` calls in correct locations
 - **Additive system** - multiple calls accumulate permission requirements
@@ -792,12 +815,14 @@ public IActionResult GetDocument(
 ```
 
 **Pros:**
+
 - Completely automatic authorization and entity loading
 - Handles HTTP status codes (404/401) automatically
 - Reduced boilerplate code in controller actions
 - Works with static analyzer automatically
 
 **Cons:**
+
 - Less flexible for complex authorization logic
 - Cannot (currently) combine multiple permission checks easily
 
@@ -810,25 +835,25 @@ public IActionResult GetDocument(
 public async Task<IActionResult> ShareDocument(
     [FromRoute] DocumentEntityId documentId,
     [FromBody] ShareDocumentRequest request
-) 
+)
 {
     // Manual authorization check
     await sealedFgaService.EnsureCheckAsync(
-        GetCurrentUserId(), 
-        DocumentEntityIdAttributes.can_edit, 
+        GetCurrentUserId(),
+        DocumentEntityIdAttributes.can_edit,
         documentId
     );
-    
+
     // Additional business logic authorization
     var document = await dbContext.Documents.FindAsync(documentId);
     if (document.IsLocked) {
         await sealedFgaService.EnsureCheckAsync(
             GetCurrentUserId(),
             DocumentEntityIdAttributes.can_override_lock,
-            documentId  
+            documentId
         );
     }
-    
+
     // Grant permissions to new users
     var shareOps = request.UserIds.Select(userId => (
         User: userId,
@@ -836,18 +861,20 @@ public async Task<IActionResult> ShareDocument(
         Object: documentId
     ));
     await sealedFgaService.QueueWrites(shareOps);
-    
+
     return Ok();
 }
 ```
 
 **Pros:**
+
 - Full flexibility for complex authorization scenarios
 - Can combine multiple permission types
 - Works well in service layers
 - `CheckAsync` and `EnsureCheckAsync` are correctly identified and followed by the static analyzer
 
 **Cons:**
+
 - More boilerplate code
 - Manual error handling required
 - Must manually load entities from database
@@ -866,7 +893,7 @@ public async Task<IActionResult> UpdateDocument(
         ParameterName = nameof(documentId)
     )] DocumentEntity document,
     [FromBody] UpdateDocumentRequest request
-) 
+)
 {
     // Manual check for special operations
     if (request.ChangeOwner && request.NewOwnerId != document.OwnerOrganizationId) {
@@ -876,17 +903,17 @@ public async Task<IActionResult> UpdateDocument(
             documentId
         );
     }
-    
+
     // Update document
     document.Title = request.Title;
     document.Content = request.Content;
-    
+
     if (request.ChangeOwner) {
         document.OwnerOrganizationId = request.NewOwnerId;
     }
-    
+
     await dbContext.SaveChangesAsync();
-    
+
     return Ok(document);
 }
 
@@ -894,10 +921,10 @@ public async Task<IActionResult> UpdateDocument(
 private async Task<bool> ValidateDocumentContent(DocumentEntityId documentId, string content)
 {
     SealedFgaGuard.RequireCheck(
-        documentId, 
+        documentId,
         DocumentEntityIdAttributes.can_edit
     );
-    
+
     // Business logic that static analyzer can verify is properly authorized
     var document = await dbContext.Documents.FindAsync(documentId);
     return content.Length <= document.MaxContentLength;
@@ -911,21 +938,25 @@ SealedFGA includes a sophisticated static analysis engine that verifies authoriz
 ### Current Capabilities
 
 #### Permission Tracking
+
 - **FgaAuthorize Attributes**: Automatically registers permissions from `[FgaAuthorize]` and `[FgaAuthorizeList]` attributes
-- **Service Method Calls**: Tracks permissions from `CheckAsync` and `EnsureCheckAsync` methods  
+- **Service Method Calls**: Tracks permissions from `CheckAsync` and `EnsureCheckAsync` methods
 - **Guard Statements**: Analyzes `SealedFgaGuard.RequireCheck` declarations
 
 #### Interprocedural Analysis
+
 - **Cross-Method Analysis**: Follows permissions through method calls up to depth 4
 - **Permission Inheritance**: Tracks authorization state across method boundaries
 - **Return Value Analysis**: Understands when methods return authorized entities
 
 #### PointsTo Analysis
+
 - **Variable Copying**: When `var copy = authorizedEntity`, `copy` inherits all permissions
 - **Assignment Tracking**: Follows entity references through variable assignments
 - **Parameter Passing**: Tracks permissions through method parameter passing
 
 #### Dependency Injection Support
+
 - **Interface Resolution**: Uses `[ImplementedBy]` attribute to follow interface calls
 - **Service Layer Analysis**: Can analyze authorization in injected service classes
 - **Cross-Boundary Tracking**: Maintains permission state across DI boundaries
@@ -933,17 +964,18 @@ SealedFGA includes a sophisticated static analysis engine that verifies authoriz
 ### Current Limitations
 
 #### Raw OpenFGA SDK Detection
+
 The analyzer **cannot detect** vanilla OpenFGA .NET SDK calls:
 
 ```csharp
 // NOT DETECTED by static analysis
 var allowed = await openFgaClient.Check(new ClientCheckRequest {
     User = "user:alice",
-    Relation = "can_view", 
+    Relation = "can_view",
     Object = "document:123"
 });
 
-// DETECTED by static analysis  
+// DETECTED by static analysis
 var allowed = await sealedFgaService.CheckAsync(
     userId,
     DocumentEntityIdAttributes.can_view,
@@ -952,6 +984,7 @@ var allowed = await sealedFgaService.CheckAsync(
 ```
 
 #### BatchCheckAsync Not Supported
+
 Currently, `BatchCheckAsync` calls are not tracked by the static analyzer:
 
 ```csharp
@@ -965,10 +998,11 @@ foreach (var check in checks) {
 ```
 
 #### Developer Responsibility for Guard Placement
+
 The analyzer can only verify that `RequireCheck` declarations match actual permission checks. It's the developer's responsibility to write the right checks:
 
 ```csharp
-public async Task<DocumentEntity> EditDocument(DocumentEntity document, string content) 
+public async Task<DocumentEntity> EditDocument(DocumentEntity document, string content)
 {
     // INCORRECT: RequireCheck for can_view although we perform an edit operation
     SealedFgaGuard.RequireCheck(document, DocumentEntityIdAttributes.can_view); // Should be can_edit
@@ -980,6 +1014,7 @@ public async Task<DocumentEntity> EditDocument(DocumentEntity document, string c
 ### How Static Analysis Works
 
 #### 1. Permission Registration
+
 The analyzer tracks permissions as they are established:
 
 ```csharp
@@ -994,29 +1029,31 @@ public IActionResult GetDocument(
 ```
 
 #### 2. Permission Inheritance via PointsTo
+
 When variables are copied, permissions are inherited:
 
 ```csharp
 public IActionResult ProcessDocument(
     [FgaAuthorize(...)] DocumentEntity authorizedDoc  // Has "can_view" permission
-) 
+)
 {
-    var docCopy = authorizedDoc;        // ← docCopy inherits "can_view" 
+    var docCopy = authorizedDoc;        // ← docCopy inherits "can_view"
     var docReference = docCopy;         // ← docReference inherits "can_view"
-    
+
     return ProcessDocumentHelper(docReference);  // ← Permission flows through call
 }
 
-private IActionResult ProcessDocumentHelper(DocumentEntity doc) 
+private IActionResult ProcessDocumentHelper(DocumentEntity doc)
 {
     // Static analyzer knows 'doc' has "can_view" permission from call site
     SealedFgaGuard.RequireCheck(doc, DocumentEntityIdAttributes.can_view); // ✅ Satisfied
-    
+
     return Ok(doc.Content);  // ✅ Database access is properly authorized
 }
 ```
 
-#### 3. Interprocedural Analysis  
+#### 3. Interprocedural Analysis
+
 The analyzer follows permissions across method calls:
 
 ```csharp
@@ -1024,7 +1061,7 @@ The analyzer follows permissions across method calls:
 public async Task<IActionResult> ProcessDocument(
     [FromRoute] DocumentEntityId documentId,
     [FgaAuthorize(...)] DocumentEntity document
-) 
+)
 {
     // Call service method - permissions flow through
     var result = await documentService.ProcessDocumentAsync(document);
@@ -1036,31 +1073,32 @@ public async Task<ProcessResult> ProcessDocumentAsync(DocumentEntity document)
 {
     // Analyzer knows 'document' has permissions from controller call site
     SealedFgaGuard.RequireCheck(document, DocumentEntityIdAttributes.can_edit);
-    
+
     // This database access is verified as properly authorized
     document.LastProcessed = DateTime.UtcNow;
     await dbContext.SaveChangesAsync();
-    
+
     return new ProcessResult { Success = true };
 }
 ```
 
 #### 4. Dependency Injection Resolution
+
 With `[ImplementedBy]` attribute, analyzer follows interface calls:
 
 ```csharp
 [ImplementedBy(typeof(DocumentService))]
-public interface IDocumentService 
+public interface IDocumentService
 {
     Task ValidateDocumentAsync(DocumentEntity document);
 }
 
-public class DocumentController(IDocumentService documentService) : ControllerBase 
-{   
-    [HttpPost("{documentId}/validate")]  
+public class DocumentController(IDocumentService documentService) : ControllerBase
+{
+    [HttpPost("{documentId}/validate")]
     public async Task<IActionResult> ValidateDocument(
         [FgaAuthorize(...)] DocumentEntity document  // Has permissions
-    ) 
+    )
     {
         // Analyzer follows this call into DocumentService.ValidateDocumentAsync
         await documentService.ValidateDocumentAsync(document);
@@ -1070,16 +1108,16 @@ public class DocumentController(IDocumentService documentService) : ControllerBa
 
 public class DocumentService : IDocumentService
 {
-    public async Task ValidateDocumentAsync(DocumentEntity document) 
+    public async Task ValidateDocumentAsync(DocumentEntity document)
     {
         // Analyzer knows 'document' parameter has permissions from controller
         SealedFgaGuard.RequireCheck(document, DocumentEntityIdAttributes.can_view);
-        
+
         // Database access is verified as authorized
         var validationRules = await dbContext.ValidationRules
             .Where(r => r.DocumentType == document.Type)
             .ToListAsync();
-            
+
         // Complex validation logic...
     }
 }
@@ -1090,15 +1128,17 @@ public class DocumentService : IDocumentService
 ### Best Practices for Static Analysis
 
 #### Use SealedFGA APIs Consistently
+
 ```csharp
 // GOOD: Static analyzer can track this
 await sealedFgaService.CheckAsync(userId, relation, objectId);
 
-// BAD: Static analyzer cannot track this  
+// BAD: Static analyzer cannot track this
 await openFgaClient.Check(new ClientCheckRequest { ... });
 ```
 
 #### Annotate Interfaces with ImplementedBy
+
 ```csharp
 // GOOD: Static analyzer can follow DI calls
 [ImplementedBy(typeof(DocumentService))]
@@ -1111,6 +1151,7 @@ public interface IDocumentService { ... }
 > **Note:** SealedFGA uses an analyzer to identify interfaces in your code that have only a single implementing class; a warning is then generated if the `ImplementedBy` attribute is not used which can be suppressed if this is deliberate.
 
 #### Use Attribute-Based Authorization When Possible
+
 Attribute-based authorization is automatically tracked and provides the clearest analysis:
 
 ```csharp
@@ -1122,7 +1163,7 @@ public IActionResult GetDocument(
 
 // GOOD: Manual tracking, more flexible
 [HttpGet("{id}")]
-public async Task<IActionResult> GetDocument([FromRoute] DocumentEntityId id) 
+public async Task<IActionResult> GetDocument([FromRoute] DocumentEntityId id)
 {
     await sealedFgaService.EnsureCheckAsync(userId, relation, id);
     var document = await dbContext.Documents.FindAsync(id);
@@ -1137,8 +1178,9 @@ If you have an existing application using the OpenFGA .NET SDK directly, here's 
 ### Step 1: Replace Raw IDs with Strongly-Typed IDs
 
 **Before (Vanilla OpenFGA):**
+
 ```csharp
-public class DocumentEntity 
+public class DocumentEntity
 {
     public Guid Id { get; set; }                    // Raw GUID
     public Guid OwnerOrganizationId { get; set; }   // Raw GUID
@@ -1147,15 +1189,16 @@ public class DocumentEntity
 ```
 
 **After (SealedFGA):**
+
 ```csharp
 public class DocumentEntity : ISealedFgaType<DocumentEntityId>
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public DocumentEntityId Id { get; set; } = null!;                      // Strongly-typed
-    
+
     [SealedFgaRelation(nameof(DocumentEntityIdGroups.owner))]
     public OrganizationEntityId OwnerOrganizationId { get; set; } = null!; // Strongly-typed + automatic relation updating
-    
+
     public string Title { get; set; }
 }
 ```
@@ -1163,9 +1206,10 @@ public class DocumentEntity : ISealedFgaType<DocumentEntityId>
 ### Step 2: Replace Manual Authorization Checks
 
 **Before (Vanilla OpenFGA):**
+
 ```csharp
 [HttpGet("{documentId}")]
-public async Task<IActionResult> GetDocument([FromRoute] Guid documentId) 
+public async Task<IActionResult> GetDocument([FromRoute] Guid documentId)
 {
     // Manual authorization check
     var checkResponse = await openFgaClient.Check(new ClientCheckRequest {
@@ -1173,22 +1217,23 @@ public async Task<IActionResult> GetDocument([FromRoute] Guid documentId)
         Relation = "can_view",                      // String - typo prone & not easily refactorable!
         Object = $"document:{documentId}"
     });
-    
+
     if (!(checkResponse.Allowed ?? false)) {
         return Unauthorized();
     }
-    
+
     // Manual entity loading
     var document = await dbContext.Documents.FindAsync(documentId);
     if (document == null) {
         return NotFound();
     }
-    
+
     return Ok(document);
 }
 ```
 
 **After (SealedFGA):**
+
 ```csharp
 [HttpGet("{documentId}")]
 public IActionResult GetDocument(
@@ -1203,12 +1248,13 @@ public IActionResult GetDocument(
 ### Step 3: Replace Manual Relation Management
 
 **Before (Vanilla OpenFGA):**
+
 ```csharp
 [HttpPut("{documentId}/owner")]
 public async Task<IActionResult> ChangeDocumentOwner(
     [FromRoute] Guid documentId,
     [FromBody] ChangeOwnerRequest request
-) 
+)
 {
     // Manual authorization
     var allowed = await openFgaClient.Check(new ClientCheckRequest {
@@ -1217,11 +1263,11 @@ public async Task<IActionResult> ChangeDocumentOwner(
         Object = $"document:{documentId}"
     });
     if (!(allowed.Allowed ?? false)) return Unauthorized();
-    
+
     // Manual entity loading
     var document = await dbContext.Documents.FindAsync(documentId);
     if (document == null) return NotFound();
-    
+
     // Manual relation management - error prone!
     await openFgaClient.Write(new ClientWriteRequest {
         Deletes = new List<ClientTupleKeyWithoutCondition> {
@@ -1231,24 +1277,25 @@ public async Task<IActionResult> ChangeDocumentOwner(
                 Object = $"document:{documentId}"
             }
         },
-        Writes = new List<ClientTupleKey> {  
+        Writes = new List<ClientTupleKey> {
             new() {
                 User = $"organization:{request.NewOwnerId}",
-                Relation = "owner", 
+                Relation = "owner",
                 Object = $"document:{documentId}"
             }
         }
     });
-    
+
     // Update entity
     document.OwnerOrganizationId = request.NewOwnerId;
     await dbContext.SaveChangesAsync();
-    
+
     return Ok();
 }
 ```
 
 **After (SealedFGA):**
+
 ```csharp
 [HttpPut("{documentId}/owner")]
 public async Task<IActionResult> ChangeDocumentOwner(
@@ -1258,12 +1305,12 @@ public async Task<IActionResult> ChangeDocumentOwner(
         ParameterName = nameof(documentId)
     )] DocumentEntity document,                          // Automatic auth + loading!
     [FromBody] ChangeOwnerRequest request
-) 
+)
 {
     // Simple property update - relations managed automatically!
     document.OwnerOrganizationId = request.NewOwnerId;
     await dbContext.SaveChangesAsync();                  // Automatic relation update via interceptor!
-    
+
     return Ok();
 }
 ```
@@ -1271,10 +1318,11 @@ public async Task<IActionResult> ChangeDocumentOwner(
 ### Step 4: Replace Service Layer Authorization
 
 **Before (Vanilla OpenFGA):**
+
 ```csharp
-public class DocumentService 
+public class DocumentService
 {
-    public async Task<DocumentEntity> GetDocumentAsync(Guid documentId, Guid currentUserId) 
+    public async Task<DocumentEntity> GetDocumentAsync(Guid documentId, Guid currentUserId)
     {
         // Manual string-based authorization
         var allowed = await openFgaClient.Check(new ClientCheckRequest {
@@ -1282,22 +1330,23 @@ public class DocumentService
             Relation = "can_view",                       // Typo-prone string!
             Object = $"document:{documentId}"
         });
-        
+
         if (!(allowed.Allowed ?? false)) {
             throw new UnauthorizedAccessException();
         }
-        
+
         return await dbContext.Documents.FindAsync(documentId);
     }
 }
 ```
 
 **After (SealedFGA):**
+
 ```csharp
-public class DocumentService 
+public class DocumentService
 {
     public async Task<DocumentEntity> GetDocumentAsync(
-        DocumentEntityId documentId, 
+        DocumentEntityId documentId,
         UserEntityId currentUserId
     ) {
         // Strongly-typed authorization with automatic error handling
@@ -1306,18 +1355,18 @@ public class DocumentService
             DocumentEntityIdAttributes.can_view,        // Compile-time checked!
             documentId
         );
-        
+
         return await dbContext.Documents.FindAsync(documentId);
     }
-    
+
     // Alternative: Use guard statements for static analysis
-    public async Task<DocumentEntity> GetDocumentWithGuardAsync(DocumentEntityId documentId) 
+    public async Task<DocumentEntity> GetDocumentWithGuardAsync(DocumentEntityId documentId)
     {
         SealedFgaGuard.RequireCheck(
-            documentId, 
+            documentId,
             DocumentEntityIdAttributes.can_view
         );
-        
+
         return await dbContext.Documents.FindAsync(documentId);
     }
 }

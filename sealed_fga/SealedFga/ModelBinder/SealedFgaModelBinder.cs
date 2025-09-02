@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SealedFga.Fga;
 
 namespace SealedFga.ModelBinder;
 
@@ -25,11 +26,13 @@ public abstract class SealedFgaModelBinder<TAttr>(Type dbContextType) : IModelBi
                            .ParameterInfo
                            .GetCustomAttributes(typeof(TAttr), false)
                            .FirstOrDefault();
-        if (param is null || attr is null) {
+        var sealedFgaService = context.HttpContext.RequestServices.GetRequiredService<SealedFgaService>();
+        var rawUserString = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "open_fga_user")?.Value;
+        if (param is null || attr is null || rawUserString is null) {
             return;
         }
 
-        await FgaBind(context, param, attr);
+        await FgaBind(context, param, sealedFgaService, rawUserString, attr);
     }
 
     /// <summary>
@@ -45,6 +48,16 @@ public abstract class SealedFgaModelBinder<TAttr>(Type dbContextType) : IModelBi
     /// </summary>
     /// <param name="context">The model binding context.</param>
     /// <param name="param">The controller parameter descriptor.</param>
+    /// <param name="sealedFgaService">The SealedFGA service.</param>
+    /// <param name="openFgaRawUserString">
+    ///     The raw OpenFGA user string from the HttpContext's User ClaimsPrincipal.
+    /// </param>
     /// <param name="attr">The attribute instance.</param>
-    protected abstract Task FgaBind(ModelBindingContext context, ControllerParameterDescriptor param, TAttr attr);
+    protected abstract Task FgaBind(
+        ModelBindingContext context,
+        ControllerParameterDescriptor param,
+        SealedFgaService sealedFgaService,
+        string openFgaRawUserString,
+        TAttr attr
+    );
 }

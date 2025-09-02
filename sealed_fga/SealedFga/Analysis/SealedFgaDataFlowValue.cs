@@ -8,8 +8,7 @@ namespace SealedFga.Analysis;
 ///     Represents the authorization state during data flow analysis.
 ///     Contains information about which permissions have been verified for which objects.
 /// </summary>
-sealed class SealedFgaDataFlowValue : IAbstractAnalysisValue, IEquatable<SealedFgaDataFlowValue> {
-
+internal sealed class SealedFgaDataFlowValue : IAbstractAnalysisValue, IEquatable<SealedFgaDataFlowValue> {
     /// <summary>
     ///     Creates a new SealedFgaDataFlowValue with the specified authorization state.
     /// </summary>

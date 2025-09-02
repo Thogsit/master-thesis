@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpenFga.Sdk.Client;
 using SealedFga.Fga;
+using SealedFga.Middleware;
 using SealedFga.ModelBinder;
+using SealedFga.Sample.Auth;
 using SealedFga.Sample.Database;
 using SealedFga.Sample.Secret;
 using TickerQ.Dashboard.DependencyInjection;
@@ -31,6 +34,11 @@ public static class Program {
                 options.ModelBinderProviders.Insert(0, new SealedFgaModelBinderProvider<SealedFgaSampleContext>());
             }
         );
+
+        // Add authentication
+        builder.Services.AddAuthentication("MockScheme")
+               .AddScheme<AuthenticationSchemeOptions, MockAuthenticationHandler>("MockScheme", options => { });
+        builder.Services.AddAuthorization();
 
         // TODO: Make SealedFga configuration less manual
         builder.Services.AddSingleton<OpenFgaClient>(_ => {
@@ -71,6 +79,9 @@ public static class Program {
 
         var app = builder.Build();
 
+        app.UseSealedFgaExceptionHandler();
+        app.UseAuthentication();
+        app.UseAuthorization();
         app.UseRouting();
         app.MapControllers();
         app.UseTickerQ();
