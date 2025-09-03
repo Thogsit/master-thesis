@@ -11,7 +11,7 @@ public partial class UserEntityId;
 
 public class UserEntity : ISealedFgaType<UserEntityId> {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public UserEntityId Id { get; set; }
+    public UserEntityId Id { get; set; } = null!;
 
     [SealedFgaRelation(nameof(AgencyEntityIdGroups.Member), SealedFgaRelationTargetType.User)]
     public required AgencyEntityId AgencyId { get; set; }

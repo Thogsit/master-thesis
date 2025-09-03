@@ -10,6 +10,5 @@ public interface ISealedFgaTypeId<out TId> : ISealedFgaTypeIdWithoutAssociatedId
     ///     Returns the current object as an SealedFGA ID tuple string, e.g. "company:&lt;company_id&gt;".
     /// </summary>
     /// <returns>ID in OpenFGA tuple string representation.</returns>
-    public string AsOpenFgaIdTupleString()
-        => $"{IdUtil.GetNameByIdType(GetType())}:{ToString()}";
+    public string AsOpenFgaIdTupleString();
 }

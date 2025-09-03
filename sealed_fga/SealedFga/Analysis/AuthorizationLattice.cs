@@ -63,9 +63,9 @@ public sealed class AuthorizationLattice : IEquatable<AuthorizationLattice> {
 
         if (_authorizations.Count != other._authorizations.Count) return false;
 
-        foreach (var (entity, permissions) in _authorizations) {
-            if (!other._authorizations.TryGetValue(entity, out var otherPermissions) ||
-                !permissions.Equals(otherPermissions)) {
+        foreach (var kvp in _authorizations) {
+            if (!other._authorizations.TryGetValue(kvp.Key, out var otherPermissions) ||
+                !kvp.Value.Equals(otherPermissions)) {
                 return false;
             }
         }
@@ -181,11 +181,11 @@ public sealed class AuthorizationLattice : IEquatable<AuthorizationLattice> {
          * +--------+--------+----------+
          */
         var builder = ImmutableDictionary.CreateBuilder<AbstractLocation, PermissionSet>();
-        foreach (var (entity, currentPermissions) in _authorizations) {
-            if (other._authorizations.TryGetValue(entity, out var otherPermissions)) {
-                var intersection = currentPermissions.Intersect(otherPermissions);
+        foreach (var kvp in _authorizations) {
+            if (other._authorizations.TryGetValue(kvp.Key, out var otherPermissions)) {
+                var intersection = kvp.Value.Intersect(otherPermissions);
                 if (!intersection.IsEmpty) {
-                    builder[entity] = intersection;
+                    builder[kvp.Key] = intersection;
                 }
             }
         }
@@ -218,11 +218,11 @@ public sealed class AuthorizationLattice : IEquatable<AuthorizationLattice> {
          * +--------+--------+----------+
          */
         var builder = _authorizations.ToBuilder();
-        foreach (var (entity, otherPermissions) in other._authorizations) {
-            if (builder.TryGetValue(entity, out var currentPermissions)) {
-                builder[entity] = currentPermissions.Union(otherPermissions);
+        foreach (var kvp in other._authorizations) {
+            if (builder.TryGetValue(kvp.Key, out var currentPermissions)) {
+                builder[kvp.Key] = currentPermissions.Union(kvp.Value);
             } else {
-                builder[entity] = otherPermissions;
+                builder[kvp.Key] = kvp.Value;
             }
         }
 
@@ -253,9 +253,9 @@ public sealed class AuthorizationLattice : IEquatable<AuthorizationLattice> {
          * |   A    |   B    |  A ⊆ B   |
          * +--------+--------+----------+
          */
-        foreach (var (entity, currentPermissions) in _authorizations) {
-            if (!other._authorizations.TryGetValue(entity, out var otherPermissions)
-                || !currentPermissions.IsSubsetOf(otherPermissions)) {
+        foreach (var kvp in _authorizations) {
+            if (!other._authorizations.TryGetValue(kvp.Key, out var otherPermissions)
+                || !kvp.Value.IsSubsetOf(otherPermissions)) {
                 return false;
             }
         }
@@ -300,12 +300,14 @@ public sealed class AuthorizationLattice : IEquatable<AuthorizationLattice> {
 
         return _authorizations.Aggregate(
             0,
-            (acc, kvp) =>
-                HashCode.Combine(
-                    acc,
-                    kvp.Key.GetHashCode(),
-                    kvp.Value.GetHashCode()
-                )
+            (acc, kvp) => {
+                unchecked {
+                    var hash = acc;
+                    hash = (hash * 397) ^ kvp.Key.GetHashCode();
+                    hash = (hash * 397) ^ kvp.Value.GetHashCode();
+                    return hash;
+                }
+            }
         );
     }
 

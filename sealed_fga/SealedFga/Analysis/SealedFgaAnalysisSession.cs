@@ -89,12 +89,12 @@ public class SealedFgaAnalysisSession(
 
         // Build interface redirects
         var interfaceRedirects = new Dictionary<ITypeSymbol, INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        foreach (var (interfaceSymbol, implByAttr) in _implByAttrByInterface) {
-            if (implByAttr.ConstructorArguments[0].Value is not INamedTypeSymbol implementingClassSymbol) {
+        foreach (var kvp in _implByAttrByInterface) {
+            if (kvp.Value.ConstructorArguments[0].Value is not INamedTypeSymbol implementingClassSymbol) {
                 continue;
             }
 
-            interfaceRedirects.Add(interfaceSymbol, implementingClassSymbol.OriginalDefinition);
+            interfaceRedirects.Add(kvp.Key, implementingClassSymbol.OriginalDefinition);
         }
 
         // Rewrite the syntax trees to resolve dependency injection
@@ -186,17 +186,18 @@ public class SealedFgaAnalysisSession(
         }
 
         // Every interface that has exactly one implementing class could possibly miss the "ImplementedBy" attribute
-        foreach (var (interfaceSymbol, implCount) in _implementerCountByInterface) {
-            if (implCount != 1) {
+        foreach (var kvp in _implementerCountByInterface) {
+            if (kvp.Value != 1) {
                 continue;
             }
 
-            foreach (var location in interfaceSymbol.Locations) {
+            foreach (var location in kvp.Key.Locations) {
                 context.ReportDiagnostic(
                     Diagnostic.Create(
                         SealedFgaDiagnosticRules.PossiblyMisingImplementedByRule,
                         location,
-                        interfaceSymbol.Name
+                        (object?)null,
+                        kvp.Key.Name
                     )
                 );
             }
@@ -293,13 +294,13 @@ public class SealedFgaAnalysisSession(
                 if (SymbolEqualityComparer.Default.Equals(attrData.AttributeClass, fgaAuthorizeAttributeSymbol)) {
                     string? relParam = null;
                     string? paramNameParam = null;
-                    foreach (var (paramName, paramVal) in attrData.NamedArguments) {
-                        switch (paramName) {
+                    foreach (var kvp in attrData.NamedArguments) {
+                        switch (kvp.Key) {
                             case "Relation":
-                                relParam = paramVal.Value as string;
+                                relParam = kvp.Value.Value as string;
                                 break;
                             case "ParameterName":
-                                paramNameParam = paramVal.Value as string;
+                                paramNameParam = kvp.Value.Value as string;
                                 break;
                         }
                     }

@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+  <Import Project="../settings.props" />
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -22,17 +23,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(MicrosoftEntityFrameworkCoreVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="$(MicrosoftEntityFrameworkCoreVersion)" />
   </ItemGroup>
 
   <!-- TODO: Find a better solution -->
   <ItemGroup>
-    <PackageReference Include="Antlr4.Runtime.Standard" OutputItemType="Analyzer" Version="4.13.1" />
+    <PackageReference Include="Antlr4.Runtime.Standard" OutputItemType="Analyzer" Version="$(Antlr4RuntimeStandardVersion)" />
     <Analyzer Include="..\SealedFga\bin\Debug\netstandard2.0\OpenFga.Language.dll" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.6" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="$(MicrosoftDataSqliteVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_Data_Sqlite)\lib\netstandard2.0\*.dll" />
-    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="$(MicrosoftCodeAnalysisVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_AnalyzerUtilities)\lib\netstandard2.0\*.dll" />
     <!--
     <Reference Include="Microsoft.CodeAnalysis.NetAnalyzers">
@@ -43,10 +44,10 @@
     <!--
     -->
 
-    <PackageReference Include="TickerQ" Version="2.5.2" />
-    <PackageReference Include="TickerQ.EntityFrameworkCore" Version="2.5.2" />
-    <PackageReference Include="TickerQ.Dashboard" Version="2.5.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="TickerQ" Version="$(TickerQVersion)" />
+    <PackageReference Include="TickerQ.EntityFrameworkCore" Version="$(TickerQVersion)" />
+    <PackageReference Include="TickerQ.Dashboard" Version="$(TickerQVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(MicrosoftEntityFrameworkCoreVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_EntityFrameworkCore_Relational)\lib\netstandard2.0\*.dll" />
     <!-- Can be used if TickerQ needs some changes
     <Reference Include="TickerQ">
@@ -66,27 +67,27 @@
     <Analyzer Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" />-->
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.3.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="$(MicrosoftAspNetCoreMvcVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_AspNetCore_Mvc_Abstractions)\lib\netstandard2.0\*.dll" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="$(MicrosoftAspNetCoreMvcVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_AspNetCore_Mvc_Core)\lib\netstandard2.0\*.dll" />
-    <PackageReference Include="OpenFga.Sdk" Version="0.7.0-alpha.1" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="OpenFga.Sdk" Version="$(OpenFgaSdkVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgOpenFga_Sdk)\lib\netstandard2.0\*.dll" />
-    <PackageReference Include="System.IO.Pipelines" Version="9.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="System.IO.Pipelines" Version="$(SystemIOPipelinesVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgSystem_IO_Pipelines)\lib\netstandard2.0\*.dll" />
-    <PackageReference Include="System.Text.Json" Version="9.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgSystem_Text_Json)\lib\netstandard2.0\*.dll" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftBclAsyncInterfacesVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_Bcl_AsyncInterfaces)\lib\netstandard2.0\*.dll" />
-    <PackageReference Include="Microsoft.CodeAnalysis" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.CodeAnalysis" Version="$(MicrosoftCodeAnalysisVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_CodeAnalysis)\analyzers\dotnet\cs\*.dll" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="$(MicrosoftCodeAnalysisVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_CodeAnalysis_Analyzers)\analyzers\dotnet\cs\*.dll" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Analyzers" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Analyzers" Version="$(MicrosoftEntityFrameworkCoreVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_AspNetCore_Components_Analyzers)\analyzers\dotnet\cs\*.dll" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="9.0.4" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="$(MicrosoftEntityFrameworkCoreVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_EntityFrameworkCore_Analyzers)\analyzers\dotnet\cs\*.dll" />
-    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="8.0.0" OutputItemType="Analyzer" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="$(MicrosoftExtensionsObjectPoolVersion)" OutputItemType="Analyzer" GeneratePathProperty="true" />
     <Analyzer Include="$(PkgMicrosoft_Extensions_ObjectPool)\lib\netstandard2.0\*.dll" />
   </ItemGroup>
 

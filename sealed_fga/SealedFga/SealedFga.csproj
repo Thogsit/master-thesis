@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../settings.props" />
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
     <IncludeBuildOutput>true</IncludeBuildOutput>
@@ -15,21 +16,22 @@
     <Version>0.0.1</Version>
   </PropertyGroup>
 
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="$(MicrosoftAspNetCoreMvcVersion)" />
     <!--
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="$(MicrosoftCodeAnalysisVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     -->
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.6" PrivateAssets="all" GeneratePathProperty="true" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
-    <PackageReference Include="TickerQ" Version="2.5.2" PrivateAssets="all" />
-    <PackageReference Include="TickerQ.EntityFrameworkCore" Version="2.5.2" PrivateAssets="all" />
-    <PackageReference Include="TickerQ.Utilities" Version="2.5.2" PrivateAssets="all" />
-    <PackageReference Include="OpenFga.Sdk" Version="0.7.0-alpha.1" PrivateAssets="all" />
-    <PackageReference Include="PolySharp" Version="1.15.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="$(MicrosoftDataSqliteVersion)" PrivateAssets="all" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="$(MicrosoftCodeAnalysisVersion)" PrivateAssets="all" />
+    <PackageReference Include="TickerQ" Version="$(TickerQVersion)" PrivateAssets="all" />
+    <PackageReference Include="TickerQ.EntityFrameworkCore" Version="$(TickerQVersion)" PrivateAssets="all" />
+    <PackageReference Include="TickerQ.Utilities" Version="$(TickerQVersion)" PrivateAssets="all" />
+    <PackageReference Include="OpenFga.Sdk" Version="$(OpenFgaSdkVersion)" PrivateAssets="all" />
+    <PackageReference Include="PolySharp" Version="$(PolySharpVersion)" PrivateAssets="all" />
     <ProjectReference Include="..\..\openfga-language\pkg\csharp\OpenFga.Language.csproj" PrivateAssets="all" />
   </ItemGroup>
 
@@ -44,9 +46,9 @@
     </Reference>
     -->
     <!-- Or THIS for the real library
-    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="$(MicrosoftCodeAnalysisVersion)" PrivateAssets="all" />
     -->
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.0" GeneratePathProperty="true" />
+    <PackageReference Include="System.Collections.Immutable" Version="$(SystemCollectionsImmutableVersion)" GeneratePathProperty="true" />
   </ItemGroup>
 
   <!-- This is needed to ensure that the analyzer DLLs are included in the NuGet package.

@@ -61,5 +61,11 @@ internal sealed class SealedFgaDataFlowValue : IAbstractAnalysisValue, IEquatabl
 
     public override bool Equals(object? obj) => obj is SealedFgaDataFlowValue other && Equals(other);
 
-    public override int GetHashCode() => HashCode.Combine(AuthorizationState, Negated);
+    public override int GetHashCode() {
+        unchecked {
+            var hash = AuthorizationState.GetHashCode();
+            hash = (hash * 397) ^ Negated.GetHashCode();
+            return hash;
+        }
+    }
 }

@@ -8,9 +8,4 @@ public interface ISealedFgaType<TId> where TId : ISealedFgaTypeId<TId> {
     ///     The SealedFGA ID of this entity.
     /// </summary>
     public TId Id { get; set; }
-
-    /// <summary>
-    ///     Returns the SealedFGA ID as a string in the format "type:id".
-    /// </summary>
-    public string AsOpenFgaIdTupleString() => Id.AsOpenFgaIdTupleString();
 }

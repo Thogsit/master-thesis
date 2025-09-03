@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <TickerQVersion>2.6.3</TickerQVersion>
+    <MicrosoftDataSqliteVersion>9.0.6</MicrosoftDataSqliteVersion>
+    <MicrosoftCodeAnalysisVersion>4.14.0</MicrosoftCodeAnalysisVersion>
+    <OpenFgaSdkVersion>0.7.0-alpha.1</OpenFgaSdkVersion>
+    <MicrosoftEntityFrameworkCoreVersion>9.0.4</MicrosoftEntityFrameworkCoreVersion>
+    <MicrosoftAspNetCoreMvcVersion>2.3.0</MicrosoftAspNetCoreMvcVersion>
+    <SystemCollectionsImmutableVersion>9.0.0</SystemCollectionsImmutableVersion>
+    <PolySharpVersion>1.15.0</PolySharpVersion>
+    <Antlr4RuntimeStandardVersion>4.13.1</Antlr4RuntimeStandardVersion>
+    <MicrosoftBclAsyncInterfacesVersion>9.0.0</MicrosoftBclAsyncInterfacesVersion>
+    <SystemTextJsonVersion>9.0.0</SystemTextJsonVersion>
+    <SystemIOPipelinesVersion>9.0.0</SystemIOPipelinesVersion>
+    <MicrosoftExtensionsObjectPoolVersion>8.0.0</MicrosoftExtensionsObjectPoolVersion>
+  </PropertyGroup>
+</Project>

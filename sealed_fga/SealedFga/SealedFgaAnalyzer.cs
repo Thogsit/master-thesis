@@ -16,7 +16,7 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer {
     ];
 
     public override void Initialize(AnalysisContext context) {
-        //context.EnableConcurrentExecution(); // TODO: Put back in when done with debugging
+        context.EnableConcurrentExecution();
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
 
         context.RegisterCompilationStartAction(compilationStartContext => {
@@ -32,7 +32,7 @@ public class SealedFgaAnalyzer : DiagnosticAnalyzer {
                 )!;
                 var sealedFgaGuardSymbol = compilationStartContext.Compilation.GetTypeByMetadataName(
                     typeof(SealedFgaGuard).FullName!
-                );
+                )!;
                 var httpEndpointAttributes =
                     Settings.HttpEndpointAttributeFullNames.Select(name =>
                                  compilationStartContext.Compilation.GetTypeByMetadataName(name)!

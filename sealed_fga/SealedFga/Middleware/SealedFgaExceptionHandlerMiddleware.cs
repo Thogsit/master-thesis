@@ -12,8 +12,7 @@ namespace SealedFga.Middleware;
 ///     Maps custom exceptions to appropriate HTTP responses.
 /// </summary>
 public class SealedFgaExceptionHandlerMiddleware(
-    RequestDelegate next,
-    ILogger<SealedFgaExceptionHandlerMiddleware> logger
+    RequestDelegate next
 ) {
     /// <summary>
     ///     Invokes the middleware to handle exceptions.

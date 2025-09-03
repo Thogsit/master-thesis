@@ -122,7 +122,11 @@ public sealed class PermissionSet : IEquatable<PermissionSet> {
     public override bool Equals(object? obj) => obj is PermissionSet other && Equals(other);
 
     public override int GetHashCode() =>
-        _permissions.Aggregate(0, (acc, permission) => HashCode.Combine(acc, permission.GetHashCode()));
+        _permissions.Aggregate(0, (acc, permission) => {
+            unchecked {
+                return (acc * 397) ^ permission.GetHashCode();
+            }
+        });
 
     public override string ToString() => $"[{string.Join(", ", _permissions.OrderBy(p => p))}]";
 
