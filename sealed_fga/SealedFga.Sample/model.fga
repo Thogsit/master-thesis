@@ -6,11 +6,14 @@ type user
 
 # Used as a parent (="User") for secrets
 type agency
+  relations
+    # Annotated via [OpenFgaRelation] in the entity
+    define Member: [user]
 
 # Used as an object
 type secret
   relations
     # Annotated via [OpenFgaRelation] in the entity
     define OwnedBy: [agency]
-    define can_view: [user]
-    define can_edit: [user]
+    define can_view: [user] or Member from OwnedBy
+    define can_edit: [user] or Member from OwnedBy

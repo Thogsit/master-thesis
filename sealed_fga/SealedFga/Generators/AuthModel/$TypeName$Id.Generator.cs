@@ -118,6 +118,7 @@ public static class TypeNameIdGenerator {
               """,
             new HashSet<string>([
                     ..GetTypeDependentUsings(idClassToGenerate),
+                    "System",
                     "Microsoft.EntityFrameworkCore.Storage.ValueConversion",
                     Settings.AuthModelNamespace,
                     Settings.UtilNamespace,
@@ -151,7 +152,8 @@ public static class TypeNameIdGenerator {
 
     private static HashSet<string> GetTypeDependentUsings(IdClassToGenerateData idClassToGenerate) {
         var usings = new HashSet<string>();
-        if (idClassToGenerate.Type == SealedFgaTypeIdType.Guid) usings.Add("System");
+
+        // Type dependent usings can be added here
 
         return usings;
     }

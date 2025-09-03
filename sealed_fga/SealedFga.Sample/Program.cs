@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +17,7 @@ using TickerQ.EntityFrameworkCore.DependencyInjection;
 namespace SealedFga.Sample;
 
 public static class Program {
-    public static void Main(string[] args) {
+    public static async Task Main(string[] args) {
         SealedFgaInit.Initialize();
 
         var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,18 @@ public static class Program {
                 options.UseInMemoryDatabase("SealedFgaSampleDb");
                 options.AddInterceptors(
                     sp.GetRequiredService<SealedFgaSaveChangesInterceptor>()
+                );
+            }
+        );
+        builder.Services.AddTickerQ(opt => {
+                opt.SetMaxConcurrency(10);
+                opt.AddOperationalStore<SealedFgaSampleContext>(efOpt => {
+                        efOpt.UseModelCustomizerForMigrations();
+                    }
+                );
+                opt.AddDashboard(config => {
+                        config.BasePath = "/tickerq";
+                    }
                 );
             }
         );
@@ -68,14 +81,6 @@ public static class Program {
         );
         builder.Services.AddScoped<SealedFgaService>();
         builder.Services.AddScoped<SealedFgaSaveChangesInterceptor>();
-        builder.Services.AddTickerQ(opt => {
-                opt.AddOperationalStore<SealedFgaSampleContext>(efOpt => {
-                        efOpt.UseModelCustomizerForMigrations();
-                    }
-                );
-                opt.AddDashboard("/tickerq");
-            }
-        );
 
         var app = builder.Build();
 
@@ -89,9 +94,10 @@ public static class Program {
         // Seed the database
         using (var scope = app.Services.CreateScope()) {
             var context = scope.ServiceProvider.GetRequiredService<SealedFgaSampleContext>();
-            context.Database.EnsureCreated();
+            await context.Database.EnsureCreatedAsync();
+            await context.AddDummyData();
         }
 
-        app.Run();
+        await app.RunAsync();
     }
 }
