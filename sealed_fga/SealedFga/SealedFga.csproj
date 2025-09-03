@@ -5,7 +5,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
-    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
@@ -14,8 +14,25 @@
     <RootNamespace>SealedFga</RootNamespace>
     <PackageId>SealedFga</PackageId>
     <Version>0.0.1</Version>
-  </PropertyGroup>
 
+    <!-- Package metadata -->
+    <Title>SealedFGA</Title>
+    <Description>A Roslyn analyzer and source generator for improved OpenFGA integration</Description>
+    <Authors>Leonard Sondermann</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Thogsit/master-thesis</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Thogsit/master-thesis</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>roslyn;analyzer;source-generator;openfga;authorization</PackageTags>
+    <PackageReadmeFile>Readme.md</PackageReadmeFile>
+
+    <!-- Analyzer package specific settings -->
+    <DevelopmentDependency>false</DevelopmentDependency>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IncludeSource>true</IncludeSource>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="$(MicrosoftAspNetCoreMvcVersion)" />
@@ -27,10 +44,13 @@
     -->
     <PackageReference Include="Microsoft.Data.Sqlite" Version="$(MicrosoftDataSqliteVersion)" PrivateAssets="all" GeneratePathProperty="true" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="$(MicrosoftCodeAnalysisVersion)" PrivateAssets="all" />
-    <PackageReference Include="TickerQ" Version="$(TickerQVersion)" PrivateAssets="all" />
-    <PackageReference Include="TickerQ.EntityFrameworkCore" Version="$(TickerQVersion)" PrivateAssets="all" />
-    <PackageReference Include="TickerQ.Utilities" Version="$(TickerQVersion)" PrivateAssets="all" />
-    <PackageReference Include="OpenFga.Sdk" Version="$(OpenFgaSdkVersion)" PrivateAssets="all" />
+
+    <!-- Runtime dependencies - remove PrivateAssets=all to make them available to consumers -->
+    <PackageReference Include="TickerQ" Version="$(TickerQVersion)" GeneratePathProperty="true" />
+    <PackageReference Include="TickerQ.EntityFrameworkCore" Version="$(TickerQVersion)" GeneratePathProperty="true" />
+    <PackageReference Include="TickerQ.Utilities" Version="$(TickerQVersion)" GeneratePathProperty="true" />
+    <PackageReference Include="OpenFga.Sdk" Version="$(OpenFgaSdkVersion)" GeneratePathProperty="true" />
+
     <PackageReference Include="PolySharp" Version="$(PolySharpVersion)" PrivateAssets="all" />
     <ProjectReference Include="..\..\openfga-language\pkg\csharp\OpenFga.Language.csproj" PrivateAssets="all" />
   </ItemGroup>
@@ -58,6 +78,17 @@
     <None Include="$(OutputPath)\OpenFga.Language.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="$(PkgSystem_Collections_Immutable)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="$(PkgMicrosoft_Data_Sqlite)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(PkgTickerQ)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(PkgTickerQ_EntityFrameworkCore)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(PkgTickerQ_Utilities)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(PkgOpenFga_Sdk)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+
+    <!-- Include the analyzer utilities DLL -->
+    <None Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+
+    <!-- Include README -->
+    <None Include="Readme.md" Pack="true" PackagePath="\" />
+
     <!--
     <None Include="..\..\Microsoft.CodeAnalysis.AnalyzerUtilities.Public.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="4.14.0" PrivateAssets="all" ExcludeAssets="all" GeneratePathProperty="true" />
