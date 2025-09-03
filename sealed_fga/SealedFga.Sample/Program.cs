@@ -4,56 +4,30 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpenFga.Sdk.Client;
-using SealedFga.Fga;
 using SealedFga.Middleware;
-using SealedFga.ModelBinder;
 using SealedFga.Sample.Auth;
 using SealedFga.Sample.Database;
 using SealedFga.Sample.Secret;
-using TickerQ.Dashboard.DependencyInjection;
-using TickerQ.DependencyInjection;
-using TickerQ.EntityFrameworkCore.DependencyInjection;
 
 namespace SealedFga.Sample;
 
 public static class Program {
     public static async Task Main(string[] args) {
-        SealedFgaInit.Initialize();
-
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container
         builder.Services.AddDbContext<SealedFgaSampleContext>((sp, options) => {
                 options.UseInMemoryDatabase("SealedFgaSampleDb");
-                options.AddInterceptors(
-                    sp.GetRequiredService<SealedFgaSaveChangesInterceptor>()
-                );
-            }
-        );
-        builder.Services.AddTickerQ(opt => {
-                opt.SetMaxConcurrency(10);
-                opt.AddOperationalStore<SealedFgaSampleContext>(efOpt => {
-                        efOpt.UseModelCustomizerForMigrations();
-                    }
-                );
-                opt.AddDashboard(config => {
-                        config.BasePath = "/tickerq";
-                    }
-                );
+                options.AddSealedFga(sp);
             }
         );
         builder.Services.AddScoped<ISecretService, SecretService>();
-        builder.Services.AddControllers(options => {
-                options.ModelBinderProviders.Insert(0, new SealedFgaModelBinderProvider<SealedFgaSampleContext>());
-            }
-        );
 
         // Add authentication
         builder.Services.AddAuthentication("MockScheme")
                .AddScheme<AuthenticationSchemeOptions, MockAuthenticationHandler>("MockScheme", options => { });
         builder.Services.AddAuthorization();
 
-        // TODO: Make SealedFga configuration less manual
         builder.Services.AddSingleton<OpenFgaClient>(_ => {
                 var fgaClient = new OpenFgaClient(
                     new ClientConfiguration {
@@ -79,17 +53,21 @@ public static class Program {
                 );
             }
         );
-        builder.Services.AddScoped<SealedFgaService>();
-        builder.Services.AddScoped<SealedFgaSaveChangesInterceptor>();
+
+        // Configure SealedFGA
+        builder.Services.ConfigureSealedFga<SealedFgaSampleContext>(
+            opt => opt.QueueFgaServiceOperations = false,
+            false
+        );
 
         var app = builder.Build();
 
-        app.UseSealedFgaExceptionHandler();
+        // TODO: Maybe move SealedFGA related config into some init method
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseRouting();
         app.MapControllers();
-        app.UseTickerQ();
+        app.UseSealedFga();
 
         // Seed the database
         using (var scope = app.Services.CreateScope()) {

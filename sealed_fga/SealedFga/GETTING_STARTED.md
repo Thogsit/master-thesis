@@ -101,11 +101,47 @@ SealedFGA provides multiple layers of security:
 SealedFGA automatically includes the following dependencies:
 
 - **OpenFGA .NET SDK** - For OpenFGA server communication
-- **TickerQ** - Background job processing for performance optimization
+- **TickerQ** - Background job processing for performance optimization (optional)
 - **Microsoft.CodeAnalysis** - Static analysis engine
 - **EntityFramework.Core** - Database integration
 
 ## Complete Setup Guide
+
+### Configuration Options
+
+#### Runtime Configuration
+
+SealedFGA can be configured at runtime in your `Program.cs` using the options pattern:
+
+```csharp
+// Option 1: Using Configure<T>
+builder.Services.Configure<SealedFgaOptions>(options => {
+    options.QueueFgaServiceOperations = false; // Disable TickerQ
+});
+
+// Option 2: Using extension method (recommended)
+builder.Services.ConfigureSealedFga(options => {
+    options.QueueFgaServiceOperations = false; // Disable TickerQ
+});
+
+// Option 3: Default configuration (TickerQ enabled)
+builder.Services.ConfigureSealedFga(); // Uses defaults
+```
+
+**QueueFgaServiceOperations Options:**
+
+- **`true` (Default)**: Uses TickerQ for reliable background job processing with retry mechanisms. Requires TickerQ setup in `Program.cs`.
+- **`false`**: Executes OpenFGA operations immediately in background using `Task.Run()`. No TickerQ dependency required.
+
+> **When to use `false`:**
+> - Simple applications that don't need complex retry logic
+> - Environments where you want to minimize dependencies
+> - Development/testing scenarios where immediate execution is preferred
+>
+> **When to use `true`:**
+> - Production applications that need reliable operation processing
+> - Applications with high-frequency OpenFGA operations
+> - When you need detailed operation monitoring via TickerQ dashboard
 
 ### Program.cs Configuration
 
@@ -174,11 +210,17 @@ public static class Program {
             });
         });
 
-        // 4. Register SealedFGA services
+        // 4. Configure SealedFGA options (optional - defaults to TickerQ enabled)
+        builder.Services.ConfigureSealedFga(options => {
+            options.QueueFgaServiceOperations = true; // Set to false to disable TickerQ
+        });
+
+        // 5. Register SealedFGA services
         builder.Services.AddScoped<SealedFgaService>();
         builder.Services.AddScoped<SealedFgaSaveChangesInterceptor>();
 
-        // 5. Configure TickerQ for background processing
+        // 6. Configure TickerQ for background processing (only if QueueFgaServiceOperations = true)
+        // If you set QueueFgaServiceOperations to false, you can skip this section
         builder.Services.AddTickerQ(opt => {
             opt.AddOperationalStore<YourDbContext>(efOpt => {
                 efOpt.UseModelCustomizerForMigrations();
@@ -188,12 +230,13 @@ public static class Program {
 
         var app = builder.Build();
 
-        // 6. Configure middleware
+        // 7. Configure middleware
         app.UseRouting();
         app.MapControllers();
-        app.UseTickerQ(); // REQUIRED: Enable TickerQ processing
+        // Only required if QueueFgaServiceOperations = true
+        app.UseTickerQ(); // Enable TickerQ processing
 
-        // 7. Initialize database
+        // 8. Initialize database
         using (var scope = app.Services.CreateScope()) {
             var context = scope.ServiceProvider.GetRequiredService<YourDbContext>();
             context.Database.EnsureCreated();
@@ -431,9 +474,13 @@ public class DocumentEntity : ISealedFgaType<DocumentEntityId>
 
 This happens automatically during `context.SaveChangesAsync()` (or the `SaveChanges()` pendant) via the SealedFGA interceptor.
 
-### Background Processing with TickerQ
+### Background Processing
 
-All OpenFGA operations are queued in the background for non-blocking updates and automatic retrial:
+SealedFGA provides two modes for background processing of OpenFGA operations:
+
+#### TickerQ Mode (QueueFgaServiceOperations = true)
+
+All OpenFGA operations are queued in the background for reliable processing with automatic retries:
 
 ```csharp
 // This queues the operation instead of blocking the HTTP request
@@ -444,6 +491,36 @@ await sealedFgaService.QueueWrite(userId, DocumentEntityIdAttributes.can_edit, d
 // - 10 minutes after second failure
 // - 1 hour after third failure
 ```
+
+**Benefits:**
+- Reliable processing with automatic retries
+- TickerQ dashboard for monitoring operations
+- Persistent queue survives application restarts
+- Built-in error handling and dead letter queue
+
+#### Direct Mode (QueueFgaServiceOperations = false)
+
+Operations are executed immediately in the background using `Task.Run()`:
+
+```csharp
+// Configure in Program.cs
+builder.Services.ConfigureSealedFga(options => {
+    options.QueueFgaServiceOperations = false; // Enable direct mode
+});
+
+// This executes immediately in the background (non-blocking)
+await sealedFgaService.QueueWrite(userId, DocumentEntityIdAttributes.can_edit, documentId);
+
+// Operation executes via Task.Run() - no retry mechanism
+```
+
+**Benefits:**
+- Simpler setup - no TickerQ dependency required
+- Lower resource usage
+- Immediate execution for faster development/testing
+- Reduced complexity for simple applications
+
+> **Note:** Method names still contain "Queue" for backwards compatibility, but behavior depends on the `QueueFgaServiceOperations` setting.
 
 ## API Reference
 

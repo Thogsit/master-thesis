@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 using OpenFga.Sdk.Client;
 using OpenFga.Sdk.Client.Model;
 using OpenFga.Sdk.Model;
@@ -21,8 +22,11 @@ namespace SealedFga.Fga;
 /// </summary>
 public class SealedFgaService(
     OpenFgaClient openFgaClient,
-    ITimeTickerManager<TimeTicker> tickerQ
+    ITimeTickerManager<TimeTicker> tickerQ,
+    IOptions<SealedFgaOptions> options
 ) {
+    private readonly SealedFgaOptions _options = options.Value;
+
     private static readonly int[] DefaultRetryIntervals = [
         TimeSpan.FromMinutes(1).Seconds,
         TimeSpan.FromMinutes(10).Seconds,
@@ -375,49 +379,69 @@ public class SealedFgaService(
     ///     Queues a write operation using raw strings.
     /// </summary>
     /// <param name="tuple">The tuple to write</param>
-    internal async Task QueueWrite(TupleKey tuple)
-        => await tickerQ.AddAsync(
-            CreateTimeTicker(
-                SealedFgaQueue.FgaWriteJobName,
-                tuple
-            )
-        );
+    internal async Task QueueWrite(TupleKey tuple) {
+        if (_options.QueueFgaServiceOperations) {
+            await tickerQ.AddAsync(
+                CreateTimeTicker(
+                    SealedFgaQueue.FgaWriteJobName,
+                    tuple
+                )
+            );
+        } else {
+            _ = Task.Run(() => SafeWriteTupleAsync([tuple]));
+        }
+    }
 
     /// <summary>
     ///     Queues a delete operation using raw strings.
     /// </summary>
     /// <param name="tuple">The tuple to delete</param>
-    internal async Task QueueDelete(TupleKey tuple)
-        => await tickerQ.AddAsync(
-            CreateTimeTicker(
-                SealedFgaQueue.FgaDeleteJobName,
-                tuple
-            )
-        );
+    internal async Task QueueDelete(TupleKey tuple) {
+        if (_options.QueueFgaServiceOperations) {
+            await tickerQ.AddAsync(
+                CreateTimeTicker(
+                    SealedFgaQueue.FgaDeleteJobName,
+                    tuple
+                )
+            );
+        } else {
+            _ = Task.Run(() => SafeDeleteTupleAsync([tuple]));
+        }
+    }
 
     /// <summary>
     ///     Queues multiple write operations using raw strings.
     /// </summary>
     /// <param name="tuples">Collection of tuples to write</param>
-    internal async Task QueueWrites(IEnumerable<TupleKey> tuples)
-        => await tickerQ.AddAsync(
-            CreateTimeTicker(
-                SealedFgaQueue.FgaWriteMultipleJobName,
-                tuples
-            )
-        );
+    internal async Task QueueWrites(IEnumerable<TupleKey> tuples) {
+        if (_options.QueueFgaServiceOperations) {
+            await tickerQ.AddAsync(
+                CreateTimeTicker(
+                    SealedFgaQueue.FgaWriteMultipleJobName,
+                    tuples
+                )
+            );
+        } else {
+            _ = Task.Run(() => SafeWriteTupleAsync(tuples.ToList()));
+        }
+    }
 
     /// <summary>
     ///     Queues multiple delete operations using raw strings.
     /// </summary>
     /// <param name="tuples">Collection of tuples to delete</param>
-    internal async Task QueueDeletes(IEnumerable<TupleKey> tuples)
-        => await tickerQ.AddAsync(
-            CreateTimeTicker(
-                SealedFgaQueue.FgaDeleteMultipleJobName,
-                tuples
-            )
-        );
+    internal async Task QueueDeletes(IEnumerable<TupleKey> tuples) {
+        if (_options.QueueFgaServiceOperations) {
+            await tickerQ.AddAsync(
+                CreateTimeTicker(
+                    SealedFgaQueue.FgaDeleteMultipleJobName,
+                    tuples
+                )
+            );
+        } else {
+            _ = Task.Run(() => SafeDeleteTupleAsync(tuples.ToList()));
+        }
+    }
 
     /// <summary>
     ///     Queues a modify ID operation to replace all relations with an old ID with a new ID.
@@ -431,14 +455,19 @@ public class SealedFgaService(
         TId oldId,
         TId newId,
         CancellationToken cancellationToken = new()
-    ) where TId : ISealedFgaTypeId<TId>
-        => await tickerQ.AddAsync(
-            CreateTimeTicker(
-                SealedFgaQueue.FgaModifyIdJobName,
-                (oldId, newId)
-            ),
-            cancellationToken
-        );
+    ) where TId : ISealedFgaTypeId<TId> {
+        if (_options.QueueFgaServiceOperations) {
+            await tickerQ.AddAsync(
+                CreateTimeTicker(
+                    SealedFgaQueue.FgaModifyIdJobName,
+                    (oldId, newId)
+                ),
+                cancellationToken
+            );
+        } else {
+            _ = Task.Run(() => ModifyIdAsync(oldId, newId, cancellationToken), cancellationToken);
+        }
+    }
 
     /// <summary>
     ///     Queues multiple write and delete operations for processing.
@@ -451,13 +480,19 @@ public class SealedFgaService(
         IEnumerable<TupleKey> writes,
         IEnumerable<TupleKey> deletes,
         CancellationToken cancellationToken = new()
-    ) => await tickerQ.AddAsync(
-        CreateTimeTicker(
-            SealedFgaQueue.FgaWriteAndDeleteMultipleJobName,
-            (writes, deletes)
-        ),
-        cancellationToken
-    );
+    ) {
+        if (_options.QueueFgaServiceOperations) {
+            await tickerQ.AddAsync(
+                CreateTimeTicker(
+                    SealedFgaQueue.FgaWriteAndDeleteMultipleJobName,
+                    (writes, deletes)
+                ),
+                cancellationToken
+            );
+        } else {
+            _ = Task.Run(() => SafeWriteAndDeleteTuplesAsync(writes.ToList(), deletes.ToList(), cancellationToken), cancellationToken);
+        }
+    }
 
     /// <summary>
     ///     Lists objects that a user has a specific relation to using raw strings.
