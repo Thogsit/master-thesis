@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -80,10 +81,24 @@ public class SealedFgaEntityListModelBinder(Type dbContextType)
         );
 
         // Parse authorized IDs into strong ID types
-        var authorizedIds = authorizedObjectStrings.Select(aos => IdUtil.ParseId(idType, aos)).ToList();
+        var listType = typeof(List<>).MakeGenericType(idType);
+        var authorizedIds = Activator.CreateInstance(listType);
+        var addMethod = listType.GetMethod(nameof(List<>.Add))!;
+        foreach (var aos in authorizedObjectStrings) {
+            addMethod.Invoke(authorizedIds, [
+                    IdUtil.ParseId(
+                    idType,
+                    aos.Split(':')[1]
+                ),
+            ]);
+        }
+
+        // Check if we have any authorized IDs using reflection
+        var countProperty = listType.GetProperty(nameof(List<>.Count))!;
+        var count = (int)countProperty.GetValue(authorizedIds);
 
         // If no authorized entities, return empty list
-        if (!authorizedIds.Any()) {
+        if (count == 0) {
             var emptyList = Activator.CreateInstance(context.ModelType);
             context.Result = ModelBindingResult.Success(emptyList);
             return;
@@ -117,7 +132,7 @@ public class SealedFgaEntityListModelBinder(Type dbContextType)
                                                            m.GetParameters().Length == 2
                                                 )
                                                .MakeGenericMethod(idType);
-        var containsCall = Expression.Call(containsMethod, Expression.Constant(authorizedIds), idProperty);
+        var containsCall = Expression.Call(containsMethod, Expression.Constant(authorizedIds, listType), idProperty);
         var lambda = Expression.Lambda(containsCall, parameter);
 
         var filteredQuery = whereMethod.Invoke(null, [dbSet, lambda]);

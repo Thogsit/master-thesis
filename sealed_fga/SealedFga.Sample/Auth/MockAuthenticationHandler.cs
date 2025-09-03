@@ -16,7 +16,7 @@ public class MockAuthenticationHandler(
     UrlEncoder encoder
 ) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder) {
     protected override Task<AuthenticateResult> HandleAuthenticateAsync() {
-        var claims = new[] { new Claim("open_fga_user", "user:example-id") };
+        var claims = new[] { new Claim("open_fga_user", "user:some-id") };
 
         var identity = new ClaimsIdentity(claims, Scheme.Name);
         var principal = new ClaimsPrincipal(identity);
